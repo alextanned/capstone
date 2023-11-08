@@ -22,12 +22,15 @@ import com.example.swim.databinding.ActivityMapsBinding;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationButtonClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationClickListener;
 import android.widget.Toast;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         ActivityCompat.OnRequestPermissionsResultCallback{
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    private FusedLocationProviderClient fusedLocationClient;
 
     /**
      * Flag indicating whether a requested permission has been denied after returning in {@link
@@ -45,6 +48,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
     /**
@@ -66,9 +70,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     LOCATION_PERMISSION_REQUEST_CODE);
         }
-
-        Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
         googleMap.setMyLocationEnabled(!permissionDenied);
+        Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    if (location != null) {
+                        LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
+                    }
+                });
+
+
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
