@@ -143,10 +143,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onPlaceSelected(Place place) {
                 LatLng selectedLatLng = place.getLatLng();
                 // Handle the selected place, e.g., add a marker to the map
+                if (destinationMarker != null) {
+                    // Remove the previous destination marker
+                    destinationMarker.remove();
+                }
                 if (selectedLatLng != null) {
-                    googleMap.addMarker(new MarkerOptions()
+                    destinationMarker = googleMap.addMarker(new MarkerOptions()
                             .position(selectedLatLng)
                             .title(place.getName()));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(selectedLatLng, 15f));
+                    clickedLatLng = selectedLatLng;
+                    setDestinationButton.setVisibility(View.VISIBLE);
                 }
             }
             @Override
