@@ -45,6 +45,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FusedLocationProviderClient fusedLocationClient;
     private Marker destinationMarker;
     private LatLng clickedLatLng;
+
+    private LatLng currentLatLng;
     private Button setDestinationButton; // Declare the Button variable
     private static final String API_KEY = BuildConfig.API_KEY;
     private AutocompleteSupportFragment autocompleteFragment;
@@ -68,20 +70,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setDestinationButton = findViewById(R.id.setDestinationButton); // Initialize the Button
         mapFragment.getMapAsync(this);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        setDestinationButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Check if a LatLng has been clicked and stored
-                if (clickedLatLng != null) {
-                    // Use the clickedLatLng for your desired action, e.g., set it as the destination
-                    // For demonstration, we'll display a toast message with the coordinates.
-                    double latitude = clickedLatLng.latitude;
-                    double longitude = clickedLatLng.longitude;
-                    String message = "Destination set to Latitude: " + latitude + ", Longitude: " + longitude;
-                    Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
+
 
         Places.initialize(getApplicationContext(), API_KEY);
 
@@ -118,8 +107,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
                         Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
+                        currentLatLng = currentLocation;
                     }
                 });
+        setDestinationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Check if a LatLng has been clicked and stored
+                if (clickedLatLng != null) {
+                    // Use the clickedLatLng for your desired action, e.g., set it as the destination
+                    // For demonstration, we'll display a toast message with the coordinates.
+                    double latitude = clickedLatLng.latitude;
+                    double longitude = clickedLatLng.longitude;
+                    String message = "Destination set to Latitude: " + latitude + ", Longitude: " + longitude;
+                    Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(clickedLatLng, 15f));
+                }
+            }
+        });
         googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
@@ -158,7 +163,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     destinationMarker = googleMap.addMarker(new MarkerOptions()
                             .position(selectedLatLng)
                             .title(place.getName()));
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(selectedLatLng, 15f));
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(selectedLatLng, 15f));
                     clickedLatLng = selectedLatLng;
                     setDestinationButton.setVisibility(View.VISIBLE);
                 }
