@@ -47,6 +47,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng clickedLatLng;
     private Button setDestinationButton; // Declare the Button variable
     private static final String API_KEY = BuildConfig.API_KEY;
+    private AutocompleteSupportFragment autocompleteFragment;
 
 
     /**
@@ -84,6 +85,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Places.initialize(getApplicationContext(), API_KEY);
 
+        autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+
         Toast.makeText(this, "Permission Denied:\n", Toast.LENGTH_LONG).show();
     }
 
@@ -113,6 +117,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (location != null) {
                         LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
+                        Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
                     }
                 });
         googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
@@ -133,9 +138,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
         });
-
-        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
-                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
 
         autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG));
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
