@@ -11,19 +11,31 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.widget.Button;
+import android.view.View;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.common.api.Status;
 import com.example.swim.databinding.ActivityMapsBinding;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationButtonClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationClickListener;
 import android.widget.Toast;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         ActivityCompat.OnRequestPermissionsResultCallback{
 
@@ -31,6 +43,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ActivityMapsBinding binding;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private FusedLocationProviderClient fusedLocationClient;
+    private Marker destinationMarker;
+    private LatLng clickedLatLng;
+    private Button setDestinationButton; // Declare the Button variable
+    private static final String API_KEY = BuildConfig.API_KEY;
+
 
     /**
      * Flag indicating whether a requested permission has been denied after returning in {@link
@@ -47,8 +64,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+        setDestinationButton = findViewById(R.id.setDestinationButton); // Initialize the Button
         mapFragment.getMapAsync(this);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        setDestinationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Check if a LatLng has been clicked and stored
+                if (clickedLatLng != null) {
+                    // Use the clickedLatLng for your desired action, e.g., set it as the destination
+                    // For demonstration, we'll display a toast message with the coordinates.
+                    double latitude = clickedLatLng.latitude;
+                    double longitude = clickedLatLng.longitude;
+                    String message = "Destination set to Latitude: " + latitude + ", Longitude: " + longitude;
+                    Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        Places.initialize(getApplicationContext(), API_KEY);
+
+        Toast.makeText(this, "Permission Denied:\n", Toast.LENGTH_LONG).show();
     }
 
     /**
@@ -79,6 +115,46 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
                     }
                 });
+        googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                if (destinationMarker != null) {
+                    // Remove the previous destination marker
+                    destinationMarker.remove();
+                }
+
+                // Add a marker at the tapped location
+                destinationMarker = googleMap.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title("Tapped Location"));
+                clickedLatLng = latLng;
+                setDestinationButton.setVisibility(View.VISIBLE);
+            }
+
+
+        });
+
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+
+        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG));
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                LatLng selectedLatLng = place.getLatLng();
+                // Handle the selected place, e.g., add a marker to the map
+                if (selectedLatLng != null) {
+                    googleMap.addMarker(new MarkerOptions()
+                            .position(selectedLatLng)
+                            .title(place.getName()));
+                }
+            }
+            @Override
+            public void onError(Status status) {
+                // Handle errors, if any
+            }
+        });
+
 
 
     }
@@ -93,4 +169,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             permissionDenied = true;
         }
     }
+
 }
