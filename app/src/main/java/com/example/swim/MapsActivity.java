@@ -135,8 +135,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 clickedLatLng = latLng;
                 setDestinationButton.setVisibility(View.VISIBLE);
             }
+        });
 
-
+        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                return true;
+            }
         });
 
         autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG));
