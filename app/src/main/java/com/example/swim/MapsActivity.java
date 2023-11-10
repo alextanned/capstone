@@ -13,6 +13,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.widget.Button;
 import android.view.View;
+import android.location.Location;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -28,6 +29,10 @@ import com.google.android.gms.maps.GoogleMap.OnMyLocationClickListener;
 import android.widget.Toast;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.Priority;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
@@ -50,6 +55,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Button setDestinationButton; // Declare the Button variable
     private static final String API_KEY = BuildConfig.API_KEY;
     private AutocompleteSupportFragment autocompleteFragment;
+    private LocationCallback locationCallback;
 
 
     /**
@@ -71,6 +77,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        // Set up LocationCallback
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                Location currentLocation = convertLatLngToLocation(currentLatLng);
+                for (Location location : locationResult.getLocations()) {
+                    // Handle the new location
+                    if (location.distanceTo(currentLocation) > 0.5f) {
+                        LatLng currentLoc = new LatLng(location.getLatitude(), location.getLongitude());
+                        currentLatLng = currentLoc;
+                        currentLocation = convertLatLngToLocation(currentLatLng);
+                        Location destLocation = convertLatLngToLocation(clickedLatLng);
+                        String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
+                        Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                        // Update the map or do other tasks with the current location
+                    }
+                }
+            }
+        };
 
         Places.initialize(getApplicationContext(), API_KEY);
 
@@ -110,6 +138,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         currentLatLng = currentLocation;
                     }
                 });
+
+        fusedLocationClient.requestLocationUpdates(createLocationRequest(), locationCallback, null);
         setDestinationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -117,9 +147,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (clickedLatLng != null) {
                     // Use the clickedLatLng for your desired action, e.g., set it as the destination
                     // For demonstration, we'll display a toast message with the coordinates.
+                    Location destLocation = convertLatLngToLocation(clickedLatLng);
+                    Location currentLocation = convertLatLngToLocation(currentLatLng);
                     double latitude = clickedLatLng.latitude;
                     double longitude = clickedLatLng.longitude;
-                    String message = "Destination set to Latitude: " + latitude + ", Longitude: " + longitude;
+                    String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
                     Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(clickedLatLng, 15f));
                 }
@@ -177,6 +209,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     }
+
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//        fusedLocationClient.removeLocationUpdates(locationCallback);
+//    }
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults); // Call the superclass method
@@ -187,6 +225,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             permissionDenied = true;
         }
+    }
+
+    private LocationRequest createLocationRequest() {
+        return LocationRequest.create()
+                .setInterval(5000)
+                .setFastestInterval(2000)
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+
+    public Location convertLatLngToLocation(LatLng latLng) {
+        Location location = new Location("");
+        location.setLatitude(latLng.latitude);
+        location.setLongitude(latLng.longitude);
+        return location;
     }
 
 }
