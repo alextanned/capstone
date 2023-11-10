@@ -1,8 +1,9 @@
 package com.example.utils;
+import java.util.HashMap;
 
 public class DataSingleton {
     private static DataSingleton instance;
-    private int sharedData = 0;
+    private HashMap<String, Integer> sharedData = new HashMap<String, Integer>();
 
     private DataSingleton() {
         // private constructor to prevent instantiation
@@ -15,11 +16,11 @@ public class DataSingleton {
         return instance;
     }
 
-    public int getSharedData() {
-        return sharedData;
+    public Integer getSharedData(String key) {
+        return sharedData.get(key);
     }
 
-    public void setSharedData(int data) {
-        this.sharedData = data;
+    public void setSharedData(String key, int data) {
+        this.sharedData.put(key, data);
     }
 }

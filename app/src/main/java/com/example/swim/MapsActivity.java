@@ -96,7 +96,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
                             Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                             // Update the map or do other tasks with the current location
-                            DataSingleton.getInstance().setSharedData((int)(currentLocation.distanceTo(destLocation)));
+                            //DataSingleton messenger = DataSingleton.getInstance();
+                            DataSingleton.getInstance().setSharedData("distance", (int)(currentLocation.distanceTo(destLocation)));
+                            DataSingleton.getInstance().setSharedData("destBearing", (int)(currentLocation.bearingTo(destLocation)));
+
                         }
                     }
                 }

@@ -92,9 +92,15 @@ public class CompassActivity extends AppCompatActivity {
 
         String heading = calculateCompassHeading(azimuth);
         headingTextView.setText(heading);
-        int receivedData = DataSingleton.getInstance().getSharedData();
-        if (receivedData != 0){
-            distanceTextView.setText(Integer.toString(receivedData) + "m");
+        //DataSingleton messenger = DataSingleton.getInstance();
+        Integer receivedDistance = DataSingleton.getInstance().getSharedData("distance");
+        if (receivedDistance != null){
+            distanceTextView.setText(Integer.toString(receivedDistance) + "m");
+        }
+
+        Integer receivedBearing = DataSingleton.getInstance().getSharedData("destBearing");
+        if (receivedBearing != null){
+            compassImageView.setRotation(receivedBearing);
         }
 
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
