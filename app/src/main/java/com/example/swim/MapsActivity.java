@@ -50,7 +50,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FusedLocationProviderClient fusedLocationClient;
     private Marker destinationMarker;
     private LatLng clickedLatLng;
-
+    private LatLng destLatLng;
     private LatLng currentLatLng;
     private Button setDestinationButton; // Declare the Button variable
     private static final String API_KEY = BuildConfig.API_KEY;
@@ -91,10 +91,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LatLng currentLoc = new LatLng(location.getLatitude(), location.getLongitude());
                         currentLatLng = currentLoc;
                         currentLocation = convertLatLngToLocation(currentLatLng);
-                        Location destLocation = convertLatLngToLocation(clickedLatLng);
-                        String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
-                        Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-                        // Update the map or do other tasks with the current location
+                        if (destLatLng != null) {
+                            Location destLocation = convertLatLngToLocation(destLatLng);
+                            String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
+                            Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                            // Update the map or do other tasks with the current location
+                            DataSingleton.getInstance().setSharedData((int)(currentLocation.distanceTo(destLocation)));
+                        }
                     }
                 }
             }
@@ -147,14 +150,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (clickedLatLng != null) {
                     // Use the clickedLatLng for your desired action, e.g., set it as the destination
                     // For demonstration, we'll display a toast message with the coordinates.
-                    Location destLocation = convertLatLngToLocation(clickedLatLng);
+                    destLatLng = clickedLatLng;
+                    Location destLocation = convertLatLngToLocation(destLatLng);
                     Location currentLocation = convertLatLngToLocation(currentLatLng);
-                    double latitude = clickedLatLng.latitude;
-                    double longitude = clickedLatLng.longitude;
+                    double latitude = destLatLng.latitude;
+                    double longitude = destLatLng.longitude;
                     String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
                     Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(clickedLatLng, 15f));
-                    DataSingleton.getInstance().setSharedData(clickedLatLng.latitude);
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destLatLng, 15f));
+
                 }
             }
         });

@@ -2,7 +2,7 @@ package com.example.utils;
 
 public class DataSingleton {
     private static DataSingleton instance;
-    private double sharedData = 0;
+    private int sharedData = 0;
 
     private DataSingleton() {
         // private constructor to prevent instantiation
@@ -15,11 +15,11 @@ public class DataSingleton {
         return instance;
     }
 
-    public double getSharedData() {
+    public int getSharedData() {
         return sharedData;
     }
 
-    public void setSharedData(double data) {
+    public void setSharedData(int data) {
         this.sharedData = data;
     }
 }
