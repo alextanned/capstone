@@ -10,11 +10,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.example.utils.DataSingleton;
 
 public class CompassActivity extends AppCompatActivity {
 
     private ImageView compassImageView;
     private TextView headingTextView;
+    private TextView distanceTextView;
     private SensorManager sensorManager;
     private Sensor magneticFieldSensor;
     private Sensor accelerometer;
@@ -30,6 +32,8 @@ public class CompassActivity extends AppCompatActivity {
         compassImageView = findViewById(R.id.compassImageView);
 
         headingTextView = findViewById(R.id.headingTextView);
+
+        distanceTextView = findViewById(R.id.distanceTextView);
 
         // Initialize SensorManager
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -88,6 +92,10 @@ public class CompassActivity extends AppCompatActivity {
 
         String heading = calculateCompassHeading(azimuth);
         headingTextView.setText(heading);
+        double receivedData = DataSingleton.getInstance().getSharedData();
+        if (receivedData != 0){
+            distanceTextView.setText(Double.toString(receivedData));
+        }
 
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
         // compassImageView.setRotation(-azimuth); // Negative to make the arrow point in the correct direction.

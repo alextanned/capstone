@@ -1,9 +1,7 @@
 package com.example.swim;
 
 import androidx.fragment.app.FragmentActivity;
-
 import android.os.Bundle;
-
 import android.Manifest.permission;
 
 import androidx.core.content.ContextCompat;
@@ -40,6 +38,8 @@ import com.google.android.libraries.places.widget.listener.PlaceSelectionListene
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.example.utils.DataSingleton;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         ActivityCompat.OnRequestPermissionsResultCallback{
@@ -154,6 +154,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
                     Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(clickedLatLng, 15f));
+                    DataSingleton.getInstance().setSharedData(clickedLatLng.latitude);
                 }
             }
         });

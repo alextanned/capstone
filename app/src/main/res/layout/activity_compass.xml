@@ -26,6 +26,17 @@
             android:textStyle="bold"
             android:layout_above="@id/compassImageView"/>
 
+        <TextView
+            android:id="@+id/distanceTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/headingTextView"
+            android:layout_marginBottom="60dp"
+            android:layout_centerHorizontal="true"
+            android:text=""
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
     </RelativeLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
