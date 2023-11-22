@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -43,7 +44,7 @@ public class ServerActivity extends AppCompatActivity {
         buttonSend = findViewById(R.id.buttonSend);
 
         // Display server IP address (You'll need to implement a method to get the actual IP)
-        textViewServerIP.setText("Server IP: " + getServerIP());
+        //textViewServerIP.setText("Server IP: " + getServerIP());
 
         startServer();
 
@@ -61,8 +62,11 @@ public class ServerActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    serverSocket = new ServerSocket(PORT);
+                    serverSocket = new ServerSocket();
+                    serverSocket.bind(new InetSocketAddress(getServerIP(), PORT));
+                    textViewServerIP.setText(serverSocket.getInetAddress().toString());
                     clientSocket = serverSocket.accept(); // Accepts a connection
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
