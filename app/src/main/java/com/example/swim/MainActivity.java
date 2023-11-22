@@ -3,16 +3,22 @@ package com.example.swim;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+<<<<<<< HEAD
 import android.content.SharedPreferences;
+=======
+>>>>>>> 0a7f7a741a4e11e46b564a9c91d6a32edc4c310d
 import android.os.Bundle;
 import android.widget.Button;
 import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
 
+<<<<<<< HEAD
     private static final String KEY_CLICKED_LATLNG = "clicked_latlng";
     private static final String PREF_NAME = "MyPrefs";
 
+=======
+>>>>>>> 0a7f7a741a4e11e46b564a9c91d6a32edc4c310d
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -39,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+<<<<<<< HEAD
     }
 
     @Override
@@ -56,5 +63,29 @@ public class MainActivity extends AppCompatActivity {
         editor.remove(KEY_CLICKED_LATLNG + "_LNG");
         editor.apply();
     }
+=======
+
+        Button openServerButton = findViewById(R.id.openServerButton);
+        openServerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, ServerActivity.class);
+                startActivity(intent);
+            }
+        });
+
+        Button openClientButton = findViewById(R.id.openClientButton);
+        openClientButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, ClientActivity.class);
+                startActivity(intent);
+            }
+        });
+
+    }
+
+
+>>>>>>> 0a7f7a741a4e11e46b564a9c91d6a32edc4c310d
 
 }
