@@ -43,8 +43,7 @@ import java.util.List;
 
 import com.example.utils.DataSingleton;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        ActivityCompat.OnRequestPermissionsResultCallback{
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
@@ -161,6 +160,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         googleMap.setMyLocationEnabled(!permissionDenied);
         Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
+
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(this, location -> {
                     if (location != null) {
@@ -258,7 +258,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         } else {
             permissionDenied = true;
+            finish();
         }
+        return;
     }
 
     private LocationRequest createLocationRequest() {
