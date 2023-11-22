@@ -2,6 +2,7 @@ package com.example.swim;
 
 
 import androidx.fragment.app.FragmentActivity;
+
 import android.os.Bundle;
 import android.content.SharedPreferences;
 import android.Manifest.permission;
@@ -26,7 +27,9 @@ import com.google.android.gms.common.api.Status;
 import com.example.swim.databinding.ActivityMapsBinding;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationButtonClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationClickListener;
+
 import android.widget.Toast;
+
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationRequest;
@@ -37,15 +40,16 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import com.example.utils.DataSingleton;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    private GoogleMap mMap;
+    private GoogleMap googleMap;
     private ActivityMapsBinding binding;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private FusedLocationProviderClient fusedLocationClient;
@@ -62,13 +66,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String PREF_NAME = "MyPrefs";
 
 
-
-
     /**
      * Flag indicating whether a requested permission has been denied after returning in {@link
      * #onRequestPermissionsResult(int, String[], int[])}.
      */
-    private boolean permissionDenied = false;
+    private boolean permissionDenied = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,7 +94,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (locationResult == null) {
                     return;
                 }
-                if (currentLatLng == null){
+                if (currentLatLng == null) {
                     return;
                 }
                 Location currentLocation = convertLatLngToLocation(currentLatLng);
@@ -103,9 +106,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         currentLatLng = currentLoc;
                         currentLocation = convertLatLngToLocation(currentLatLng);
                         if (destLatLng != null) {
-                            if (prevLatLng != null){
+                            if (prevLatLng != null) {
                                 Location prevLocation = convertLatLngToLocation(prevLatLng);
-                                int vectorBearing = (int)(prevLocation.bearingTo(currentLocation));
+                                int vectorBearing = (int) (prevLocation.bearingTo(currentLocation));
                                 String message = "Bearing to destination: " + vectorBearing;
                                 Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                                 DataSingleton.getInstance().setSharedData("destBearing", vectorBearing);
@@ -115,7 +118,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                             // Update the map or do other tasks with the current location
                             //DataSingleton messenger = DataSingleton.getInstance();
-                            DataSingleton.getInstance().setSharedData("distance", (int)(currentLocation.distanceTo(destLocation)));
+                            DataSingleton.getInstance().setSharedData("distance", (int) (currentLocation.distanceTo(destLocation)));
 
                         }
                     }
@@ -128,7 +131,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         autocompleteFragment = (AutocompleteSupportFragment)
                 getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
 
-        Toast.makeText(this, "Permission Denied:\n", Toast.LENGTH_LONG).show();
+
     }
 
     /**
@@ -141,32 +144,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app.
      */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
-        // Restore the clickedLatLng if it was previously saved
+    public void onMapReady(GoogleMap mMap) {
+        googleMap = mMap;
+        if (ActivityCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, permission.ACCESS_COARSE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            permissionDenied = false;
+            updateUI();
+        }
 
+    }
+
+    public void updateUI(){
+
+        googleMap.setMyLocationEnabled(!permissionDenied);
+        // Restore the clickedLatLng if it was previously saved
         if (clickedLatLng != null) {
             // Restore the marker
             destinationMarker = googleMap.addMarker(new MarkerOptions().position(clickedLatLng).title("Tapped Location"));
             setDestinationButton.setVisibility(View.VISIBLE);
         }
 
-        if (ActivityCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, permission.ACCESS_COARSE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(
-                    this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    LOCATION_PERMISSION_REQUEST_CODE);
-        }
-        googleMap.setMyLocationEnabled(!permissionDenied);
-        Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
-
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(this, location -> {
                     if (location != null) {
                         LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
-                        Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Permission:\n", Toast.LENGTH_LONG).show();
                         currentLatLng = currentLocation;
                     }
                 });
@@ -234,33 +244,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     setDestinationButton.setVisibility(View.VISIBLE);
                 }
             }
+
             @Override
             public void onError(Status status) {
                 // Handle errors, if any
             }
         });
-
-
-
     }
 
-//    @Override
-//    protected void onPause() {
-//        super.onPause();
-//        fusedLocationClient.removeLocationUpdates(locationCallback);
-//    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        Toast.makeText(this, "Permission requesting", Toast.LENGTH_LONG).show();
         super.onRequestPermissionsResult(requestCode, permissions, grantResults); // Call the superclass method
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 permissionDenied = false;
+                updateUI();
+                Toast.makeText(this, "Permission Granted", Toast.LENGTH_LONG).show();
             }
         } else {
+            Toast.makeText(this, "Permission denied", Toast.LENGTH_LONG).show();
             permissionDenied = true;
-            finish();
         }
-        return;
     }
 
     private LocationRequest createLocationRequest() {

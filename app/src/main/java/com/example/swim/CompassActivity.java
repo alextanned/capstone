@@ -109,7 +109,7 @@ public class CompassActivity extends AppCompatActivity {
 
     private String calculateCompassHeading(float azimuth) {
         String[] compassDirections = getResources().getStringArray(R.array.compass_heading);
-        int directionIndex = Math.round(azimuth/ 22.5f);
+        int directionIndex = Math.round(azimuth/ 45);
 
         directionIndex %= compassDirections.length;
 
