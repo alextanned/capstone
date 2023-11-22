@@ -1,7 +1,9 @@
 package com.example.swim;
 
+
 import androidx.fragment.app.FragmentActivity;
 import android.os.Bundle;
+import android.content.SharedPreferences;
 import android.Manifest.permission;
 
 import androidx.core.content.ContextCompat;
@@ -52,10 +54,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng clickedLatLng;
     private LatLng destLatLng;
     private LatLng currentLatLng;
+    private LatLng prevLatLng;
     private Button setDestinationButton; // Declare the Button variable
     private static final String API_KEY = BuildConfig.API_KEY;
     private AutocompleteSupportFragment autocompleteFragment;
     private LocationCallback locationCallback;
+    private static final String KEY_CLICKED_LATLNG = "clicked_latlng";
+    private static final String PREF_NAME = "MyPrefs";
+
+
 
 
     /**
@@ -66,6 +73,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        clickedLatLng = loadClickedLatLng();
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -84,21 +92,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (locationResult == null) {
                     return;
                 }
+                if (currentLatLng == null){
+                    return;
+                }
                 Location currentLocation = convertLatLngToLocation(currentLatLng);
                 for (Location location : locationResult.getLocations()) {
                     // Handle the new location
-                    if (location.distanceTo(currentLocation) > 0.5f) {
+                    if (location.distanceTo(currentLocation) > 0.25f) {
+                        prevLatLng = currentLatLng;
                         LatLng currentLoc = new LatLng(location.getLatitude(), location.getLongitude());
                         currentLatLng = currentLoc;
                         currentLocation = convertLatLngToLocation(currentLatLng);
                         if (destLatLng != null) {
+                            if (prevLatLng != null){
+                                Location prevLocation = convertLatLngToLocation(prevLatLng);
+                                int vectorBearing = (int)(prevLocation.bearingTo(currentLocation));
+                                String message = "Bearing to destination: " + vectorBearing;
+                                Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                                DataSingleton.getInstance().setSharedData("destBearing", vectorBearing);
+                            }
                             Location destLocation = convertLatLngToLocation(destLatLng);
-                            String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
-                            Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                            //String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
+                            //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                             // Update the map or do other tasks with the current location
                             //DataSingleton messenger = DataSingleton.getInstance();
                             DataSingleton.getInstance().setSharedData("distance", (int)(currentLocation.distanceTo(destLocation)));
-                            DataSingleton.getInstance().setSharedData("destBearing", (int)(currentLocation.bearingTo(destLocation)));
 
                         }
                     }
@@ -125,6 +143,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        // Restore the clickedLatLng if it was previously saved
+
+        if (clickedLatLng != null) {
+            // Restore the marker
+            destinationMarker = googleMap.addMarker(new MarkerOptions().position(clickedLatLng).title("Tapped Location"));
+            setDestinationButton.setVisibility(View.VISIBLE);
+        }
+
         if (ActivityCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, permission.ACCESS_COARSE_LOCATION)
@@ -247,6 +273,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         location.setLatitude(latLng.latitude);
         location.setLongitude(latLng.longitude);
         return location;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        // Save the clickedLatLng when the activity is paused
+        if (clickedLatLng != null) {
+            saveClickedLatLng(clickedLatLng);
+        }
+    }
+
+    private void saveClickedLatLng(LatLng latLng) {
+        SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putFloat(KEY_CLICKED_LATLNG + "_LAT", (float) latLng.latitude);
+        editor.putFloat(KEY_CLICKED_LATLNG + "_LNG", (float) latLng.longitude);
+        editor.apply();
+    }
+
+    private LatLng loadClickedLatLng() {
+        SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        float lat = prefs.getFloat(KEY_CLICKED_LATLNG + "_LAT", 0f);
+        float lng = prefs.getFloat(KEY_CLICKED_LATLNG + "_LNG", 0f);
+        // Check if the saved values are not the default (zero) values
+        if (lat != 0f && lng != 0f) {
+            return new LatLng(lat, lng);
+        } else {
+            // Return null if there is no valid saved LatLng
+            return null;
+        }
     }
 
 }
