@@ -12,8 +12,9 @@
         <ImageView
             android:id="@+id/compassImageView"
             android:layout_width="150dp"
-            android:layout_height="200dp"
-            android:layout_centerInParent="true"
+            android:layout_height="150dp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="100dp"
             android:src="@drawable/up_arrow" />
 
         <TextView
@@ -22,9 +23,22 @@
             android:layout_height="wrap_content"
             android:text=""
             android:layout_centerHorizontal="true"
-            android:textSize="30sp"
+            android:textSize="50sp"
             android:textStyle="bold"
-            android:layout_above="@id/compassImageView"/>
+            android:layout_marginTop="20dp"/>
+
+        <TextView
+            android:id="@+id/directionTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="5dip"
+            android:layout_marginRight="20dip"
+            android:text=""
+            android:layout_centerHorizontal="true"
+            android:textSize="50sp"
+            android:textStyle="bold" />
 
     </RelativeLayout>
 

@@ -34,13 +34,14 @@ public class CompassActivity extends AppCompatActivity {
 
     private ImageView compassImageView;
     private TextView headingTextView;
+    private TextView directionTextView;
     private SensorManager sensorManager;
     private Sensor magneticFieldSensor;
     private Sensor rotationVectorSensor;
     private Sensor accelerometer;
     private float[] magneticFieldValues = new float[3];
     private float[] accelerometerValues = new float[3];
-    private int[] phoneData = new int[3];
+    private Integer[] phoneData = new Integer[3]; //distance, delta bearing, bearing latlng
 
     private float headingDegrees = 0f;
 
@@ -58,16 +59,17 @@ public class CompassActivity extends AppCompatActivity {
         compassImageView = findViewById(R.id.compassImageView);
 
         headingTextView = findViewById(R.id.headingTextView);
+        directionTextView = findViewById(R.id.directionTextView);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
         sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        if (rotationVectorSensor == null) {
-            headingTextView.setText("NOT AVAILABLE!");
-        }else{
-            headingTextView.setText("AVAILABLE!");
-        }
+//        if (rotationVectorSensor == null) {
+//            headingTextView.setText("NOT AVAILABLE!");
+//        }else{
+//            headingTextView.setText("AVAILABLE!");
+//        }
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
 
@@ -99,6 +101,19 @@ public class CompassActivity extends AppCompatActivity {
         super.onPause();
         // Unregister the sensor listener when the activity is paused
         sensorManager.unregisterListener(sensorEventListener);
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+        executorService.shutdownNow();
+        if (socket != null && !socket.isClosed()) {
+            try {
+                socket.close(); // Close the socket
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void connectToServer() {
@@ -160,7 +175,6 @@ public class CompassActivity extends AppCompatActivity {
         SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
         if (accelerometerValues[2]<0){
             if(higher) {
-                Log.d("pitch", "higher");
                 SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Y, mappedRotationMatrix);
             }else{
                 higher = true;
@@ -180,15 +194,11 @@ public class CompassActivity extends AppCompatActivity {
         SensorManager.getOrientation(mappedRotationMatrix, orientationValues);
 
         // Calculate the azimuth angle (in radians) and convert it to degrees
-        float azimuth = orientationValues[0]; // azimuth (yaw) in radians
-        float pitch = orientationValues[1];   // pitch in radians
-        float roll = orientationValues[2];    // roll in radians
+//        float azimuth = orientationValues[0]; // azimuth (yaw) in radians
+//        float pitch = orientationValues[1];   // pitch in radians
+//        float roll = orientationValues[2];    // roll in radians
         float azimuthInRadians = orientationValues[0];
-        if (Math.abs(pitch) < Math.toRadians(30) && Math.abs(roll) < Math.toRadians(30)) {
-            // Device is close to horizontal, adjust azimuth
-            // You may need to experiment with different adjustments
-            azimuthInRadians += Math.PI; // For example, add π to azimuth when close to horizontal
-        }
+
         float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
 
 //        if(Math.abs(Math.toDegrees(event.values[1])) > 45){
@@ -208,12 +218,27 @@ public class CompassActivity extends AppCompatActivity {
     private void updateUI(float azimuth) {
 
         String heading = calculateCompassHeading(azimuth);
-//        headingTextView.setText(heading + azimuth);
-//        Log.d("test", String.valueOf(azimuth));
-
+        directionTextView.setText(heading);
+//
+        int newAzimuth = heuristicHeading(azimuth);
+        Log.d("newAz", String.valueOf(newAzimuth));
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
-         compassImageView.setRotation(-azimuth); // Negative to make the arrow point in the correct direction.
+         compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
     }
+
+    private int heuristicHeading(float azimuth) {
+        int relativeHeading = 0;
+        if (phoneData[2] != null) {
+            relativeHeading = phoneData[2] - (int) azimuth;
+            if (relativeHeading < 0) {
+                relativeHeading += 360;
+            }
+
+        }
+        return relativeHeading;
+    }
+
+
 
 
     private String calculateCompassHeading(float azimuth) {
