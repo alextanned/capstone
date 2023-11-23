@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Swim"
+rootProject.name = "SmartSwim"
 include ':app'

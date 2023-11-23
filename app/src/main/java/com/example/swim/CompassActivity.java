@@ -8,10 +8,23 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.util.Log;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.Enumeration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class CompassActivity extends AppCompatActivity {
@@ -20,10 +33,15 @@ public class CompassActivity extends AppCompatActivity {
     private TextView headingTextView;
     private SensorManager sensorManager;
     private Sensor magneticFieldSensor;
+    private Sensor rotationVectorSensor;
     private Sensor accelerometer;
     private float[] magneticFieldValues = new float[3];
     private float[] accelerometerValues = new float[3];
+
     private float headingDegrees = 0f;
+
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private Socket socket = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,57 +53,113 @@ public class CompassActivity extends AppCompatActivity {
 
         headingTextView = findViewById(R.id.headingTextView);
 
-        // Initialize SensorManager
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
+        if (rotationVectorSensor == null) {
+            headingTextView.setText("NOT AVAILABLE!");
+        }else{
+            headingTextView.setText("AVAILABLE!");
+        }
 
-        // Initialize magnetic field and accelerometer sensors
-        magneticFieldSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//        // Initialize magnetic field and accelerometer sensors
+//        magneticFieldSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+//        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//
+//        // Register sensor listeners
+//        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_NORMAL);
+//        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
-        // Register sensor listeners
-        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+//        connectToServer();
+
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Register the sensor listener when the activity is resumed
+        if (rotationVectorSensor != null) {
+            sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Unregister the sensor listener when the activity is paused
+        sensorManager.unregisterListener(sensorEventListener);
+    }
+
+    private void connectToServer() {
+//        String serverIP = editTextServerIP.getText().toString();
+//        int port = Integer.parseInt(editTextPort.getText().toString());
+        String serverIP = "192.168.159.119";
+        int port = 12345;
+
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    InetAddress ip =  InetAddress.getByName(serverIP);
+                    socket = new Socket(ip, port);
+                    InputStream inputStream = socket.getInputStream();
+                    byte[] buffer = new byte[1024];
+                    int bytes;
+                    while ((bytes = inputStream.read(buffer)) != -1) {
+                        String receivedMessage = new String(buffer, 0, bytes);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                headingTextView.append(receivedMessage + "\n");
+                                Log.d("Message", receivedMessage);
+                            }
+                        });
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                System.arraycopy(event.values, 0, accelerometerValues, 0, 3);
-            } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                System.arraycopy(event.values, 0, magneticFieldValues, 0, 3);
+//            Log.d("accuracy", String.valueOf(accuracy));
+            if (event.sensor == rotationVectorSensor) {
 
-                // Calculate azimuth
-                float azimuth = calculateAzimuth();
-
-                // Update the UI to display the heading (rotate compassImageView)
+                float azimuth = calculateAzimuth(event);
                 updateUI(azimuth);
             }
         }
 
-
-
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
-            // Handle accuracy changes if needed.
+
         }
     };
 
-    private float calculateAzimuth() {
-        float[] rotationMatrix = new float[9];
+    private float calculateAzimuth(SensorEvent event) {
+        float[] rotationMatrix = new float[16];
         float[] orientationValues = new float[3];
 
-        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerValues, magneticFieldValues);
+        SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
+//        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerValues, magneticFieldValues);
         SensorManager.getOrientation(rotationMatrix, orientationValues);
 
         // Calculate the azimuth angle (in radians) and convert it to degrees
         float azimuthInRadians = orientationValues[0];
         float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
+        Log.d("pitch", String.valueOf(Math.toDegrees(event.values[1])));
+//        if(Math.abs(Math.toDegrees(event.values[1])) > 45){
+//            if (Math.toDegrees(event.values[1]) < 0){
+//                event.values[1] += 45;
+//            }
+//        }
 
         // Ensure the azimuth is within the range of 0-360 degrees
-        if (azimuthInDegrees < 0) {
-            azimuthInDegrees += 360;
-        }
+//        if (azimuthInDegrees < 0) {
+//            azimuthInDegrees += 360;
+//        }
         return azimuthInDegrees;
     }
 
@@ -93,41 +167,24 @@ public class CompassActivity extends AppCompatActivity {
 
         String heading = calculateCompassHeading(azimuth);
 //        headingTextView.setText(heading + azimuth);
-        String a = String.valueOf(magneticFieldValues[0]);
-        String b = String.valueOf(magneticFieldValues[1]);
-        String c = String.valueOf(magneticFieldValues[2]);
-        headingTextView.setText(a+b+c);
-
-        RotateAnimation ra = new RotateAnimation(
-                headingDegrees,
-                -azimuth,
-                Animation.RELATIVE_TO_SELF, 0.5f,
-                Animation.RELATIVE_TO_SELF,
-                0.5f);
-
-        // how long the animation will take place
-        ra.setDuration(500);
-//        ra.setDuration(210);
-        // set the animation after the end of the reservation status
-        ra.setFillAfter(true);
-
-        // Start the animation
-        compassImageView.startAnimation(ra);
-        headingDegrees = -azimuth;
+//        Log.d("test", String.valueOf(azimuth));
 
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
-//         compassImageView.setRotation(-azimuth); // Negative to make the arrow point in the correct direction.
+         compassImageView.setRotation(-azimuth); // Negative to make the arrow point in the correct direction.
     }
-
-
 
 
     private String calculateCompassHeading(float azimuth) {
         String[] compassDirections = getResources().getStringArray(R.array.compass_heading);
+        if (azimuth < 0) {
+            azimuth += 360;
+        }
         int directionIndex = Math.round(azimuth/ 45);
+//        directionIndex = directionIndex % 8;
 
         directionIndex %= compassDirections.length;
 
         return compassDirections[directionIndex];
     }
+
 }
