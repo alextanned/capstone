@@ -2,21 +2,13 @@
     <string name="app_name">Swim</string>
     <string-array name="compass_heading">
         <item>N</item>
-        <item>NNE</item>
         <item>NE</item>
-        <item>ENE</item>
         <item>E</item>
-        <item>ESE</item>
         <item>SE</item>
-        <item>SSE</item>
         <item>S</item>
-        <item>SSW</item>
         <item>SW</item>
-        <item>WSW</item>
         <item>W</item>
-        <item>WNW</item>
         <item>NW</item>
-        <item>NNW</item>
     </string-array>
     <string name="title_activity_maps">MapsActivity</string>
 </resources>
