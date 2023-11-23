@@ -47,8 +47,8 @@ public class CompassActivity extends AppCompatActivity {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Socket socket = null;
     static final float ALPHA = 0.25f;
-
-
+    boolean higher = true;
+    private float prevAzimuth = -1000;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,8 +61,8 @@ public class CompassActivity extends AppCompatActivity {
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
 
+        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
         if (rotationVectorSensor == null) {
             headingTextView.setText("NOT AVAILABLE!");
         }else{
@@ -77,7 +77,7 @@ public class CompassActivity extends AppCompatActivity {
 //
 //        // Register sensor listeners
 //        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_GAME);
 
         connectToServer();
 
@@ -90,7 +90,7 @@ public class CompassActivity extends AppCompatActivity {
             sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
         if (accelerometer != null){
-            sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         }
     }
 
@@ -156,10 +156,28 @@ public class CompassActivity extends AppCompatActivity {
     private float calculateAzimuth(SensorEvent event) {
         float[] rotationMatrix = new float[16];
         float[] orientationValues = new float[3];
-
+        float[] mappedRotationMatrix = new float[16];
         SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
+        if (accelerometerValues[2]<0){
+            if(higher) {
+                Log.d("pitch", "higher");
+                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Y, mappedRotationMatrix);
+            }else{
+                higher = true;
+                return prevAzimuth;
+            }
+        }else{
+            if(!higher || prevAzimuth == -1000) {
+                mappedRotationMatrix = rotationMatrix;
+            }else{
+                higher = false;
+                return prevAzimuth;
+            }
+        }
+
+
 //        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerValues, magneticFieldValues);
-        SensorManager.getOrientation(rotationMatrix, orientationValues);
+        SensorManager.getOrientation(mappedRotationMatrix, orientationValues);
 
         // Calculate the azimuth angle (in radians) and convert it to degrees
         float azimuth = orientationValues[0]; // azimuth (yaw) in radians
@@ -183,6 +201,7 @@ public class CompassActivity extends AppCompatActivity {
 //        if (azimuthInDegrees < 0) {
 //            azimuthInDegrees += 360;
 //        }
+        prevAzimuth = azimuthInDegrees;
         return azimuthInDegrees;
     }
 
@@ -231,7 +250,7 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     private String getRouterIp() {
-        final WifiManager manager = (WifiManager) super.getSystemService(WIFI_SERVICE);
+        final WifiManager manager = (WifiManager) super.getApplicationContext().getSystemService(WIFI_SERVICE);
         final DhcpInfo dhcp = manager.getDhcpInfo();
         final String address = Formatter.formatIpAddress(dhcp.gateway);
         return address;
