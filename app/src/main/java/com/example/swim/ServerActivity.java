@@ -77,8 +77,12 @@ public class ServerActivity extends Service {
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     try {
                         String dataToSend = distance + "," + bearing + "," + absoluteBearing;
+                        // Define the fixed string length
+                        int fixedLength = 20;
+                        // Use String.format to pad the string with spaces
+                        String paddedString = String.format("%-" + fixedLength + "s", dataToSend);
                         OutputStream outputStream = clientSocket.getOutputStream();
-                        outputStream.write(dataToSend.getBytes());
+                        outputStream.write(paddedString.getBytes());
                         outputStream.flush();
                     } catch (IOException e) {
                         e.printStackTrace();
