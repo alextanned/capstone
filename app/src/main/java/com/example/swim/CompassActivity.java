@@ -5,9 +5,12 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.DhcpInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.text.format.Formatter;
 import android.util.Log;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
@@ -37,7 +40,7 @@ public class CompassActivity extends AppCompatActivity {
     private Sensor accelerometer;
     private float[] magneticFieldValues = new float[3];
     private float[] accelerometerValues = new float[3];
-    private int[] phoneData;
+    private int[] phoneData = new int[3];
 
     private float headingDegrees = 0f;
 
@@ -59,12 +62,14 @@ public class CompassActivity extends AppCompatActivity {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
+
         if (rotationVectorSensor == null) {
             headingTextView.setText("NOT AVAILABLE!");
         }else{
             headingTextView.setText("AVAILABLE!");
         }
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
 
 //        // Initialize magnetic field and accelerometer sensors
 //        magneticFieldSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
@@ -74,7 +79,7 @@ public class CompassActivity extends AppCompatActivity {
 //        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
-//        connectToServer();
+        connectToServer();
 
     }
     @Override
@@ -116,8 +121,8 @@ public class CompassActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                headingTextView.append(String.valueOf(phoneData[0]) + "\n");
-                                Log.d("Message", receivedMessage);
+                                headingTextView.setText(String.valueOf(phoneData[0]) + "m\n");
+                                Log.d("Message", String.valueOf(phoneData[0]));
                             }
                         });
                     }
@@ -216,34 +221,20 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     private void unpackData(String data){
-        String[] arr = data.split(",");
+        String[] arr = data.replaceAll("\\s+","").split(",");
         int i = 0;
         for (String s : arr){
-            phoneData[i] = Integer.valueOf(s.replaceAll("\\s+",""));
+            phoneData[i] = Integer.valueOf(s);
             i++;
         }
 
     }
 
     private String getRouterIp() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-                NetworkInterface intf = en.nextElement();
-                if (intf.getName().contains("wlan")) {
-                    for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-                        InetAddress inetAddress = enumIpAddr.nextElement();
-                        if (!inetAddress.isLoopbackAddress() && (inetAddress.getAddress().length == 4)) {
-                            String ipAddress = inetAddress.getHostAddress();
-                            return ipAddress;
-                        }
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            ex.printStackTrace();
-        }
-        return null;
-
+        final WifiManager manager = (WifiManager) super.getSystemService(WIFI_SERVICE);
+        final DhcpInfo dhcp = manager.getDhcpInfo();
+        final String address = Formatter.formatIpAddress(dhcp.gateway);
+        return address;
     }
 
 }
