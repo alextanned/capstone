@@ -37,6 +37,7 @@ public class CompassActivity extends AppCompatActivity {
     private Sensor accelerometer;
     private float[] magneticFieldValues = new float[3];
     private float[] accelerometerValues = new float[3];
+    private int[] phoneData;
 
     private float headingDegrees = 0f;
 
@@ -96,9 +97,8 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     private void connectToServer() {
-//        String serverIP = editTextServerIP.getText().toString();
-//        int port = Integer.parseInt(editTextPort.getText().toString());
-        String serverIP = "192.168.159.119";
+        //String serverIP = "192.168.159.119";
+        String serverIP = getRouterIp();
         int port = 12345;
 
         executorService.execute(new Runnable() {
@@ -108,14 +108,15 @@ public class CompassActivity extends AppCompatActivity {
                     InetAddress ip =  InetAddress.getByName(serverIP);
                     socket = new Socket(ip, port);
                     InputStream inputStream = socket.getInputStream();
-                    byte[] buffer = new byte[1024];
+                    byte[] buffer = new byte[20];
                     int bytes;
                     while ((bytes = inputStream.read(buffer)) != -1) {
                         String receivedMessage = new String(buffer, 0, bytes);
+                        unpackData(receivedMessage);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                headingTextView.append(receivedMessage + "\n");
+                                headingTextView.append(String.valueOf(phoneData[0]) + "\n");
                                 Log.d("Message", receivedMessage);
                             }
                         });
@@ -156,9 +157,17 @@ public class CompassActivity extends AppCompatActivity {
         SensorManager.getOrientation(rotationMatrix, orientationValues);
 
         // Calculate the azimuth angle (in radians) and convert it to degrees
+        float azimuth = orientationValues[0]; // azimuth (yaw) in radians
+        float pitch = orientationValues[1];   // pitch in radians
+        float roll = orientationValues[2];    // roll in radians
         float azimuthInRadians = orientationValues[0];
+        if (Math.abs(pitch) < Math.toRadians(30) && Math.abs(roll) < Math.toRadians(30)) {
+            // Device is close to horizontal, adjust azimuth
+            // You may need to experiment with different adjustments
+            azimuthInRadians += Math.PI; // For example, add π to azimuth when close to horizontal
+        }
         float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
-        Log.d("pitch", String.valueOf(orientationValues[1]));
+
 //        if(Math.abs(Math.toDegrees(event.values[1])) > 45){
 //            if (Math.toDegrees(event.values[1]) < 0){
 //                event.values[1] += 45;
@@ -196,13 +205,45 @@ public class CompassActivity extends AppCompatActivity {
         return compassDirections[directionIndex];
     }
 
-    protected float[] lowPass( float[] input, float[] output ) {
-        if ( output == null ) return input;
 
-        for ( int i=0; i<input.length; i++ ) {
+    protected float[] lowPass( float[] input, float[] output ) {
+        if (output == null) return input;
+
+        for (int i = 0; i < input.length; i++) {
             output[i] = output[i] + ALPHA * (input[i] - output[i]);
         }
         return output;
+    }
+
+    private void unpackData(String data){
+        String[] arr = data.split(",");
+        int i = 0;
+        for (String s : arr){
+            phoneData[i] = Integer.valueOf(s.replaceAll("\\s+",""));
+            i++;
+        }
+
+    }
+
+    private String getRouterIp() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                if (intf.getName().contains("wlan")) {
+                    for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                        InetAddress inetAddress = enumIpAddr.nextElement();
+                        if (!inetAddress.isLoopbackAddress() && (inetAddress.getAddress().length == 4)) {
+                            String ipAddress = inetAddress.getHostAddress();
+                            return ipAddress;
+                        }
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+
     }
 
 }
