@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.view.View;
 
@@ -39,24 +40,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Button openServerButton = findViewById(R.id.openServerButton);
-        openServerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, ServerActivity.class);
-                startActivity(intent);
-            }
-        });
-
-        Button openClientButton = findViewById(R.id.openClientButton);
-        openClientButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, ClientActivity.class);
-                startActivity(intent);
-            }
-        });
-
     }
 
     @Override
@@ -68,11 +51,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void clearClickedLatLngPreferences() {
+        Log.d("hi","clear");
         SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.remove(KEY_CLICKED_LATLNG + "_LAT");
         editor.remove(KEY_CLICKED_LATLNG + "_LNG");
-        editor.apply();
+        editor.commit();
     }
 
 }

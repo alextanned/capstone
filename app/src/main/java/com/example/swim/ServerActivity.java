@@ -52,6 +52,9 @@ public class ServerActivity extends Service {
     public static ServerActivity getInstance() {
         return instance;
     }
+    public Socket getClient(){
+        return clientSocket;
+    }
 
 
     private void startServer() {
@@ -118,19 +121,23 @@ public class ServerActivity extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d(TAG,"DESTROY");
         super.onDestroy();
-        stopForeground(true);
-        executorService.shutdownNow(); // Shut down the executor service immediately
         try {
             if (serverSocket != null) {
                 serverSocket.close();
             }
             if (clientSocket != null) {
+                OutputStream outputStream = clientSocket.getOutputStream();
+                outputStream.flush();
+                outputStream.close();
                 clientSocket.close();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+        executorService.shutdownNow(); // Shut down the executor service immediately
+        stopForeground(true);
         instance = null;
     }
 

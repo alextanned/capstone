@@ -13,6 +13,7 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.util.Log;
 import android.widget.Button;
 import android.view.View;
 import android.location.Location;
@@ -113,7 +114,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 Location prevLocation = convertLatLngToLocation(prevLatLng);
                                 int vectorBearing = (int)(prevLocation.bearingTo(currentLocation));
                                 String message = "Bearing to destination: " + vectorBearing;
-                                Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                                 DataSingleton.getInstance().setSharedData("destBearing", vectorBearing);
                                 Location destLocation = convertLatLngToLocation(destLatLng);
                                 //String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
@@ -137,7 +138,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         autocompleteFragment = (AutocompleteSupportFragment)
                 getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
 
-        Toast.makeText(this, "Permission Denied:\n", Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Permission Denied:\n", Toast.LENGTH_LONG).show();
     }
 
     /**
@@ -168,13 +169,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     LOCATION_PERMISSION_REQUEST_CODE);
         }
         googleMap.setMyLocationEnabled(!permissionDenied);
-        Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(this, location -> {
                     if (location != null) {
                         LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
-                        Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
+                        //Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
                         currentLatLng = currentLocation;
                     }
                 });
@@ -193,7 +194,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     double latitude = destLatLng.latitude;
                     double longitude = destLatLng.longitude;
                     String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
-                    Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destLatLng, 15f));
 
                 }
@@ -285,6 +286,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onPause() {
+        Log.d("pause","pausee");
         super.onPause();
 
         // Save the clickedLatLng when the activity is paused
@@ -295,6 +297,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onDestroy() {
+        Log.d("destroy","destory");
         super.onDestroy();
         Intent serviceIntent = new Intent(this, ServerActivity.class);
         stopService(serviceIntent);
@@ -305,7 +308,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SharedPreferences.Editor editor = prefs.edit();
         editor.putFloat(KEY_CLICKED_LATLNG + "_LAT", (float) latLng.latitude);
         editor.putFloat(KEY_CLICKED_LATLNG + "_LNG", (float) latLng.longitude);
-        editor.apply();
+        editor.commit();
     }
 
     private LatLng loadClickedLatLng() {
@@ -324,7 +327,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void sendDataToClient(String distance, String bearing, String absoluteBearing) {
         // Get a reference to the MyServerService
         ServerActivity serverService = ServerActivity.getInstance();
-        if (serverService != null) {
+        if (serverService != null && serverService.getClient() != null) {
             serverService.sendLocationData(distance, bearing,absoluteBearing);
         }
     }
