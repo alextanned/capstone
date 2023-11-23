@@ -1,12 +1,20 @@
 package com.example.swim;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.IOException;
@@ -19,49 +27,41 @@ import java.net.SocketException;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.net.InetSocketAddress;
 
 import static android.service.controls.ControlsProviderService.TAG;
 
-public class ServerActivity extends AppCompatActivity {
-
-    private TextView textViewServerIP;
-    private EditText editTextMessage;
-    private Button buttonSend;
+public class ServerActivity extends Service {
+    private static final String TAG = "MyServerService";
     private ServerSocket serverSocket;
     private Socket clientSocket;
+    private static final String NOTIFICATION_CHANNEL_ID = "ServerActivityChannel";// for foreground activity
+
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private static final int PORT = 12345; // Example port number
-
+    private static ServerActivity instance;
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_server);
-
-        textViewServerIP = findViewById(R.id.textViewServerIP);
-        editTextMessage = findViewById(R.id.editTextMessage);
-        buttonSend = findViewById(R.id.buttonSend);
-
-        // Display server IP address (You'll need to implement a method to get the actual IP)
-        textViewServerIP.setText("Server IP: " + getServerIP());
-
+    public void onCreate() {
+        super.onCreate();
+        instance = this;
         startServer();
+        startForegroundService();
 
-        buttonSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String message = editTextMessage.getText().toString();
-                sendMessage(message);
-            }
-        });
     }
+    public static ServerActivity getInstance() {
+        return instance;
+    }
+
 
     private void startServer() {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    serverSocket = new ServerSocket(PORT);
+                    serverSocket = new ServerSocket();
+                    serverSocket.bind(new InetSocketAddress(getServerIP(), PORT));
+                    Log.d(TAG,"host ip is " + getServerIP());
                     clientSocket = serverSocket.accept(); // Accepts a connection
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -70,14 +70,15 @@ public class ServerActivity extends AppCompatActivity {
         });
     }
 
-    private void sendMessage(String message) {
+    public void sendLocationData(String distance, String bearing, String absoluteBearing) {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     try {
+                        String dataToSend = distance + "," + bearing + "," + absoluteBearing;
                         OutputStream outputStream = clientSocket.getOutputStream();
-                        outputStream.write(message.getBytes());
+                        outputStream.write(dataToSend.getBytes());
                         outputStream.flush();
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -112,8 +113,9 @@ public class ServerActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         super.onDestroy();
+        stopForeground(true);
         executorService.shutdownNow(); // Shut down the executor service immediately
         try {
             if (serverSocket != null) {
@@ -125,5 +127,34 @@ public class ServerActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        instance = null;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    private void startForegroundService() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    "Foreground Service Channel",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+
+        Notification notification = new Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setContentTitle("Your Service is Running")
+                .setContentText("App is still running")
+                .setSmallIcon(R.drawable.up_arrow)  // Replace with your notification icon
+                .build();
+
+        startForeground(1, notification);
     }
 }

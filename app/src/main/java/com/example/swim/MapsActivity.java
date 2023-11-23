@@ -2,6 +2,8 @@ package com.example.swim;
 
 
 import androidx.fragment.app.FragmentActivity;
+
+import android.content.Intent;
 import android.os.Bundle;
 import android.content.SharedPreferences;
 import android.Manifest.permission;
@@ -78,6 +80,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        Intent serviceIntent = new Intent(this, ServerActivity.class);
+        startService(serviceIntent);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -110,13 +115,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 String message = "Bearing to destination: " + vectorBearing;
                                 Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
                                 DataSingleton.getInstance().setSharedData("destBearing", vectorBearing);
+                                Location destLocation = convertLatLngToLocation(destLatLng);
+                                //String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
+                                //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+                                // Update the map or do other tasks with the current location
+                                //DataSingleton messenger = DataSingleton.getInstance();
+                                DataSingleton.getInstance().setSharedData("distance", (int)(currentLocation.distanceTo(destLocation)));
+                                int distance = (int)(currentLocation.distanceTo(destLocation));
+                                int bearingToDest = (int)(currentLocation.bearingTo(destLocation));
+                                sendDataToClient(String.valueOf(distance),String.valueOf(vectorBearing),String.valueOf(bearingToDest));
                             }
-                            Location destLocation = convertLatLngToLocation(destLatLng);
-                            //String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
-                            //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-                            // Update the map or do other tasks with the current location
-                            //DataSingleton messenger = DataSingleton.getInstance();
-                            DataSingleton.getInstance().setSharedData("distance", (int)(currentLocation.distanceTo(destLocation)));
 
                         }
                     }
@@ -285,6 +293,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Intent serviceIntent = new Intent(this, ServerActivity.class);
+        stopService(serviceIntent);
+    }
+
     private void saveClickedLatLng(LatLng latLng) {
         SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -303,6 +318,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             // Return null if there is no valid saved LatLng
             return null;
+        }
+    }
+
+    private void sendDataToClient(String distance, String bearing, String absoluteBearing) {
+        // Get a reference to the MyServerService
+        ServerActivity serverService = ServerActivity.getInstance();
+        if (serverService != null) {
+            serverService.sendLocationData(distance, bearing,absoluteBearing);
         }
     }
 
