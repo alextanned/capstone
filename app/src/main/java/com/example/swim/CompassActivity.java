@@ -221,7 +221,7 @@ public class CompassActivity extends AppCompatActivity {
         directionTextView.setText(heading);
 //
         int newAzimuth = heuristicHeading(azimuth);
-        Log.d("newAz", String.valueOf(newAzimuth));
+//        Log.d("newAz", String.valueOf(newAzimuth));
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
          compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
     }
@@ -278,6 +278,7 @@ public class CompassActivity extends AppCompatActivity {
         final WifiManager manager = (WifiManager) super.getApplicationContext().getSystemService(WIFI_SERVICE);
         final DhcpInfo dhcp = manager.getDhcpInfo();
         final String address = Formatter.formatIpAddress(dhcp.gateway);
+        Log.d("router: ", address);
         return address;
     }
 
