@@ -13,11 +13,13 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -64,8 +66,9 @@ public class ServerActivity extends Service {
                 try {
                     serverSocket = new ServerSocket();
                     serverSocket.bind(new InetSocketAddress(getServerIP(), PORT));
-                    Log.d(TAG,"host ip is " + getServerIP());
+                    //Log.d(TAG,"host ip is " + getServerIP());
                     clientSocket = serverSocket.accept(); // Accepts a connection
+                    //Log.d(TAG,"Client accpeted");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -77,8 +80,28 @@ public class ServerActivity extends Service {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
+                //Log.d(TAG,"sendlcation");
+                if(clientSocket != null) {
+                    try{
+                        clientSocket.setSoTimeout(10);
+                        InputStream inputStream = clientSocket.getInputStream();
+                        //Log.d(TAG,"blocking");
+                        // If the client sends nothing, just wait for -1 indicating the client closed the connection
+                        if (inputStream.read() == -1) {
+                            //Log.d(TAG, "Client disconnected");
+                            inputStream.close();
+                            clientSocket.close();
+                            clientSocket = null;
+                            clientSocket = serverSocket.accept();
+                            //Log.d(TAG, "Connection Accepted");
+                        }
+                    }catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     try {
+                        //Log.d(TAG,"SEND MESSAGE");
                         String dataToSend = distance + "," + bearing + "," + absoluteBearing;
                         // Define the fixed string length
                         int fixedLength = 20;
@@ -93,6 +116,7 @@ public class ServerActivity extends Service {
                 }
             }
         });
+
     }
 
     private String getServerIP() {
@@ -116,6 +140,7 @@ public class ServerActivity extends Service {
         } catch (SocketException ex) {
             Log.e(TAG, ex.toString());
         }
+        //Toast.makeText(ServerActivity.this, "Please enable wifi/data", Toast.LENGTH_SHORT).show();
         return null;
     }
 

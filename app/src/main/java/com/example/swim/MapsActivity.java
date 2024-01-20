@@ -284,25 +284,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return location;
     }
 
-    @Override
-    protected void onPause() {
-        Log.d("pause","pausee");
-        super.onPause();
-
-        // Save the clickedLatLng when the activity is paused
-        if (clickedLatLng != null) {
-            saveClickedLatLng(clickedLatLng);
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        Log.d("destroy","destory");
-        super.onDestroy();
-        Intent serviceIntent = new Intent(this, ServerActivity.class);
-        stopService(serviceIntent);
-    }
-
     private void saveClickedLatLng(LatLng latLng) {
         SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -329,6 +310,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ServerActivity serverService = ServerActivity.getInstance();
         if (serverService != null && serverService.getClient() != null) {
             serverService.sendLocationData(distance, bearing,absoluteBearing);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        Log.d("pause","pausee");
+        super.onPause();
+
+        // Save the clickedLatLng when the activity is paused
+        if (clickedLatLng != null) {
+            saveClickedLatLng(clickedLatLng);
+        }
+    }
+    @Override
+    protected void onDestroy() {
+        Log.d("destroy","destory");
+        super.onDestroy();
+        Intent serviceIntent = new Intent(this, ServerActivity.class);
+        stopService(serviceIntent);
+        if (locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            locationCallback = null;
         }
     }
 
