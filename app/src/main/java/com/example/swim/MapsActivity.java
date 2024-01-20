@@ -4,6 +4,7 @@ package com.example.swim;
 import androidx.fragment.app.FragmentActivity;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.content.SharedPreferences;
 import android.Manifest.permission;
@@ -13,6 +14,7 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.Button;
 import android.view.View;
@@ -40,11 +42,22 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 
 import com.example.utils.DataSingleton;
+
+import org.json.JSONObject;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         ActivityCompat.OnRequestPermissionsResultCallback{
@@ -65,7 +78,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String KEY_CLICKED_LATLNG = "clicked_latlng";
     private static final String PREF_NAME = "MyPrefs";
 
+    private final Handler weatherUpdateHandler = new Handler();
+    private final long WEATHER_UPDATE_INTERVAL = 5000; // 1 hour in milliseconds
 
+    private double popFirst = 0.0;
+    private double popSecond = 0.0;
+    private double windFirst = 0.0;
+    private double windSecond = 0.0;
 
 
     /**
@@ -248,16 +267,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 // Handle errors, if any
             }
         });
-
-
-
     }
+    private final Runnable weatherUpdateRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // Update the weather information
+            if(currentLatLng != null) {
+                new FetchWeatherTask().execute(currentLatLng);
+            }
 
-//    @Override
-//    protected void onPause() {
-//        super.onPause();
-//        fusedLocationClient.removeLocationUpdates(locationCallback);
-//    }
+            // Schedule the next update
+            weatherUpdateHandler.postDelayed(this, WEATHER_UPDATE_INTERVAL);
+        }
+    };
+
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults); // Call the superclass method
@@ -314,6 +338,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Start the periodic updates when the activity is in the foreground
+        weatherUpdateHandler.post(weatherUpdateRunnable);
+    }
+
+    @Override
     protected void onPause() {
         Log.d("pause","pausee");
         super.onPause();
@@ -322,6 +353,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (clickedLatLng != null) {
             saveClickedLatLng(clickedLatLng);
         }
+        weatherUpdateHandler.removeCallbacks(weatherUpdateRunnable);
     }
     @Override
     protected void onDestroy() {
@@ -332,6 +364,68 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
             locationCallback = null;
+        }
+    }
+
+    private class FetchWeatherTask extends AsyncTask<LatLng, Void, String> {
+
+        @Override
+        protected String doInBackground(LatLng... latLngs) {
+            LatLng location = latLngs[0];
+            String apiKey = "c8edce8fa32d1e7aefaa91f0003d0bfe";
+            String urlString = "https://api.openweathermap.org/data/2.5/forecast?lat=" + location.latitude + "&lon="
+                    + location.longitude + "&appid=" + apiKey;
+
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.connect();
+
+                if (connection.getResponseCode() == 200) {
+                    Scanner scanner = new Scanner(url.openStream());
+                    String response = scanner.useDelimiter("\\Z").next();
+                    scanner.close();
+
+                    return response;
+                } else {
+                    // Handle errors
+                    return "Error: " + connection.getResponseCode();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "Error: " + e.getMessage();
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            try {
+                JSONObject responseObject = new JSONObject(result);
+                JSONArray list = responseObject.getJSONArray("list");
+
+                if (list.length() > 0) {
+                   popFirst = list.getJSONObject(0).getDouble("pop");
+                   windFirst = list.getJSONObject(0).getJSONObject("wind").getDouble("speed") * 3.6;
+                   Log.d("weather","First time period POP: " + popFirst);
+
+                    if (list.length() > 1) {
+                        popSecond = list.getJSONObject(1).getDouble("pop");
+                        windSecond = list.getJSONObject(1).getJSONObject("wind").getDouble("speed") * 3.6;
+                        Log.d("weather","Second time period POP: " + popSecond);
+                    }
+                }
+                if(popFirst > 0.2 || popSecond > 0.2){
+                    //update UI
+                }
+                if (windFirst > 30 || windSecond > 30){
+                    //update UI
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
