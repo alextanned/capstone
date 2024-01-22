@@ -48,7 +48,7 @@ public class CompassActivity extends AppCompatActivity {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Socket socket = null;
     static final float ALPHA = 0.25f;
-    boolean higher = true;
+    boolean destroy;
     private float prevAzimuth = -1000;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +59,7 @@ public class CompassActivity extends AppCompatActivity {
         compassImageView = findViewById(R.id.compassImageView);
 
         headingTextView = findViewById(R.id.headingTextView);
+        Log.d("onCreate", "OnCreate");
         directionTextView = findViewById(R.id.directionTextView);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -81,6 +82,7 @@ public class CompassActivity extends AppCompatActivity {
 //        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_GAME);
 
+        destroy = false;
         connectToServer();
 
     }
@@ -106,43 +108,81 @@ public class CompassActivity extends AppCompatActivity {
     @Override
     protected void onDestroy(){
         super.onDestroy();
-        executorService.shutdownNow();
+        Log.d("onDestrony", "destroy");
         if (socket != null && !socket.isClosed()) {
+            Log.d("onDestroy", "close socket");
             try {
+                InputStream inputStream = socket.getInputStream();
+                inputStream.close();
                 socket.close(); // Close the socket
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+        executorService.shutdown();
+        destroy = true;
     }
 
     private void connectToServer() {
         //String serverIP = "192.168.159.119";
-        String serverIP = getRouterIp();
-        int port = 12345;
+
 
         executorService.execute(new Runnable() {
             @Override
             public void run() {
-                try {
-                    InetAddress ip =  InetAddress.getByName(serverIP);
-                    socket = new Socket(ip, port);
-                    InputStream inputStream = socket.getInputStream();
-                    byte[] buffer = new byte[20];
-                    int bytes;
-                    while ((bytes = inputStream.read(buffer)) != -1) {
-                        String receivedMessage = new String(buffer, 0, bytes);
-                        unpackData(receivedMessage);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                headingTextView.setText(String.valueOf(phoneData[0]) + "m\n");
-                                Log.d("Message", String.valueOf(phoneData[0]));
-                            }
-                        });
+                boolean connected = false;
+                int attempts = 0;
+                int maxAttempts = 1000; // Max number of reconnection attempts
+                int retryInterval = 100; // Time to wait before retrying (in milliseconds)
+
+                while (!connected && attempts < maxAttempts && !destroy) {
+                    Log.d("debug connected", String.valueOf(connected));
+                    try {
+                        String serverIP = getRouterIp();
+                        int port = 12345;
+                        InetAddress ip = InetAddress.getByName(serverIP);
+                        socket = new Socket(ip, port);
+                        connected = true;
+                        Log.d("connetion", "conneted");
+                        InputStream inputStream = socket.getInputStream();
+                        byte[] buffer = new byte[20];
+                        int bytes;
+                        bytes = inputStream.read(buffer);
+                        Log.d("bytes:", String.valueOf(bytes));
+                        while (bytes != -1) {
+                            Log.d("connection", "received");
+                            String receivedMessage = new String(buffer, 0, bytes);
+                            unpackData(receivedMessage);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    headingTextView.setText(String.valueOf(phoneData[0]) + "m\n");
+                                    Log.d("Message", String.valueOf(phoneData[0]));
+                                }
+                            });
+                            bytes = inputStream.read(buffer);
+                        }
+
+                        connected = false; //if reached this line, this means server
+                        inputStream.close();
+                    } catch (IOException e) {
+//                        e.printStackTrace();
+                        attempts++;
+                        connected = false;
+                        Log.d("connections",String.valueOf(destroy));
+                        Log.d("connection", "disconnecteds");
+                        try {
+                            Thread.sleep(retryInterval); // Wait before retrying
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                }
+                if (!connected) {
+                    // Handle the scenario when all reconnection attempts fail
+                    // Update UI accordingly
+                    Log.d("Connection", "max attempts reached");
                 }
             }
         });
@@ -169,25 +209,11 @@ public class CompassActivity extends AppCompatActivity {
     };
 
     private float calculateAzimuth(SensorEvent event) {
+        /*
         float[] rotationMatrix = new float[16];
         float[] orientationValues = new float[3];
         float[] mappedRotationMatrix = new float[16];
         SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
-        if (accelerometerValues[2]<0){
-            if(higher) {
-                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Y, mappedRotationMatrix);
-            }else{
-                higher = true;
-                return prevAzimuth;
-            }
-        }else{
-            if(!higher || prevAzimuth == -1000) {
-                mappedRotationMatrix = rotationMatrix;
-            }else{
-                higher = false;
-                return prevAzimuth;
-            }
-        }
 
 
 //        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerValues, magneticFieldValues);
@@ -198,8 +224,21 @@ public class CompassActivity extends AppCompatActivity {
 //        float pitch = orientationValues[1];   // pitch in radians
 //        float roll = orientationValues[2];    // roll in radians
         float azimuthInRadians = orientationValues[0];
+        */
 
-        float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
+
+
+        float[] rotationMatrix = new float[9];
+        float[] adjustedRotationMatrix = new float[9];
+        float[] orientationValues = new float[3];
+
+        SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
+        SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, adjustedRotationMatrix);
+        SensorManager.getOrientation(adjustedRotationMatrix, orientationValues);
+
+        float azimuthInRadians = orientationValues[0];
+        float pitchInRadians = orientationValues[1];
+        float rollInRadians = orientationValues[2];
 
 //        if(Math.abs(Math.toDegrees(event.values[1])) > 45){
 //            if (Math.toDegrees(event.values[1]) < 0){
@@ -211,6 +250,7 @@ public class CompassActivity extends AppCompatActivity {
 //        if (azimuthInDegrees < 0) {
 //            azimuthInDegrees += 360;
 //        }
+        float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
         prevAzimuth = azimuthInDegrees;
         return azimuthInDegrees;
     }
