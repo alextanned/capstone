@@ -65,7 +65,7 @@ public class CompassActivity extends AppCompatActivity {
         setContentView(R.layout.activity_compass);
 
         // Initialize UI elements
-//        compassImageView = findViewById(R.id.compassImageView);
+        compassImageView = findViewById(R.id.compassImageView);
 
         headingTextView = findViewById(R.id.headingTextView);
         Log.d("onCreate", "OnCreate");
@@ -297,7 +297,8 @@ public class CompassActivity extends AppCompatActivity {
         int newAzimuth = heuristicHeading(azimuth);
 //        Log.d("newAz", String.valueOf(newAzimuth));
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
-         compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
+//         compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
+
         compassImageView.setPerspectiveRotation(newAzimuth);
     }
 

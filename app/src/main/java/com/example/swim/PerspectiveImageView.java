@@ -23,7 +23,7 @@ public class PerspectiveImageView extends View {
     }
 
     private void initialize() {
-        arrowBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.up_arrow);
+        arrowBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.white_arrow);
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         matrix = new Matrix();
         camera = new android.graphics.Camera();
@@ -32,7 +32,8 @@ public class PerspectiveImageView extends View {
     public void setPerspectiveRotation(float degree) {
         // Reset the camera position
         camera.save();
-        camera.rotateY(degree); // Rotate around the vertical axis
+        camera.rotateX(60); //tilt amount
+        camera.rotateZ(degree); // Rotate around the vertical axis
         camera.getMatrix(matrix);
         camera.restore();
 
