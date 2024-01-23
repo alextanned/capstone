@@ -1,6 +1,7 @@
 package com.example.swim;
 
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -25,22 +26,27 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.example.swim.PerspectiveImageView;
+
 
 public class CompassActivity extends AppCompatActivity {
 
-    private ImageView compassImageView;
+    private PerspectiveImageView compassImageView;
     private TextView headingTextView;
     private TextView directionTextView;
     private SensorManager sensorManager;
     private Sensor magneticFieldSensor;
     private Sensor rotationVectorSensor;
     private Sensor accelerometer;
+    private Sensor gravitySensor;
     private float[] magneticFieldValues = new float[3];
     private float[] accelerometerValues = new float[3];
+    private float[] gravityValues = new float[3];
     private Integer[] phoneData = new Integer[3]; //distance, delta bearing, bearing latlng
 
     private float headingDegrees = 0f;
@@ -50,13 +56,16 @@ public class CompassActivity extends AppCompatActivity {
     static final float ALPHA = 0.25f;
     boolean destroy;
     private float prevAzimuth = -1000;
+    private boolean orientation = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
         setContentView(R.layout.activity_compass);
 
         // Initialize UI elements
-        compassImageView = findViewById(R.id.compassImageView);
+//        compassImageView = findViewById(R.id.compassImageView);
 
         headingTextView = findViewById(R.id.headingTextView);
         Log.d("onCreate", "OnCreate");
@@ -65,7 +74,7 @@ public class CompassActivity extends AppCompatActivity {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
-        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
 //        if (rotationVectorSensor == null) {
 //            headingTextView.setText("NOT AVAILABLE!");
 //        }else{
@@ -80,7 +89,10 @@ public class CompassActivity extends AppCompatActivity {
 //
 //        // Register sensor listeners
 //        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_UI);
+
+        gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        sensorManager.registerListener(sensorEventListener, gravitySensor, SensorManager.SENSOR_DELAY_UI);
 
         destroy = false;
         connectToServer();
@@ -91,10 +103,13 @@ public class CompassActivity extends AppCompatActivity {
         super.onResume();
         // Register the sensor listener when the activity is resumed
         if (rotationVectorSensor != null) {
-            sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
         }
         if (accelerometer != null){
-            sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+            sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+        if (gravitySensor != null){
+            sensorManager.registerListener(sensorEventListener, gravitySensor, SensorManager.SENSOR_DELAY_UI);
         }
     }
 
@@ -126,7 +141,6 @@ public class CompassActivity extends AppCompatActivity {
 
     private void connectToServer() {
         //String serverIP = "192.168.159.119";
-
 
         executorService.execute(new Runnable() {
             @Override
@@ -191,8 +205,11 @@ public class CompassActivity extends AppCompatActivity {
     private SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            if (event.sensor== accelerometer){
+            if (event.sensor == accelerometer){
                 accelerometerValues = lowPass(event.values.clone(), accelerometerValues);
+            }
+            if (event.sensor == gravitySensor){
+                gravityValues = event.values;
             }
 //            Log.d("accuracy", String.valueOf(accuracy));
             if (event.sensor == rotationVectorSensor) {
@@ -226,15 +243,32 @@ public class CompassActivity extends AppCompatActivity {
         float azimuthInRadians = orientationValues[0];
         */
 
+        orientation = Math.abs(gravityValues[1]) > Math.abs(gravityValues[2]);
 
-
-        float[] rotationMatrix = new float[9];
-        float[] adjustedRotationMatrix = new float[9];
+        float[] rotationMatrix = new float[16];
+        float[] adjustedRotationMatrix = new float[16];
         float[] orientationValues = new float[3];
 
         SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
-        SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, adjustedRotationMatrix);
+//        SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, adjustedRotationMatrix);
+//        SensorManager.getOrientation(adjustedRotationMatrix, orientationValues);
+        if (orientation){
+            if (gravityValues[1] < 0){
+                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Z, adjustedRotationMatrix);
+            }
+            SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, adjustedRotationMatrix);
+        } else{
+            if (gravityValues[2] <0 ){
+                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Y, adjustedRotationMatrix);
+            } else {
+                adjustedRotationMatrix = rotationMatrix.clone();
+            }
+        }
         SensorManager.getOrientation(adjustedRotationMatrix, orientationValues);
+        Log.d("gravity", Arrays.toString(gravityValues));
+
+
+
 
         float azimuthInRadians = orientationValues[0];
         float pitchInRadians = orientationValues[1];
@@ -251,7 +285,7 @@ public class CompassActivity extends AppCompatActivity {
 //            azimuthInDegrees += 360;
 //        }
         float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
-        prevAzimuth = azimuthInDegrees;
+//        prevAzimuth = azimuthInDegrees;
         return azimuthInDegrees;
     }
 
@@ -264,6 +298,7 @@ public class CompassActivity extends AppCompatActivity {
 //        Log.d("newAz", String.valueOf(newAzimuth));
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
          compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
+        compassImageView.setPerspectiveRotation(newAzimuth);
     }
 
     private int heuristicHeading(float azimuth) {
