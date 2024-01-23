@@ -3,6 +3,8 @@ package com.example.swim;
 
 import androidx.fragment.app.FragmentActivity;
 
+import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -171,33 +173,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
         // Restore the clickedLatLng if it was previously saved
-
         if (clickedLatLng != null) {
             // Restore the marker
-            destinationMarker = googleMap.addMarker(new MarkerOptions().position(clickedLatLng).title("Tapped Location"));
+            destinationMarker = mMap.addMarker(new MarkerOptions().position(clickedLatLng).title("Tapped Location"));
             setDestinationButton.setVisibility(View.VISIBLE);
         }
 
-        if (ActivityCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, permission.ACCESS_COARSE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(
-                    this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    LOCATION_PERMISSION_REQUEST_CODE);
-        }
-        googleMap.setMyLocationEnabled(!permissionDenied);
+        enableMyLocation();
+
+
         //Toast.makeText(this, "Permission Denied:\n" + permissionDenied, Toast.LENGTH_LONG).show();
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, location -> {
-                    if (location != null) {
-                        LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
-                        //Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
-                        currentLatLng = currentLocation;
-                    }
-                });
+//        fusedLocationClient.getLastLocation()
+//                .addOnSuccessListener(this, location -> {
+//                    if (location != null) {
+//                        LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+//                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
+//                        //Toast.makeText(this, "Permission:\n" , Toast.LENGTH_LONG).show();
+//                        currentLatLng = currentLocation;
+//                    }
+//                });
 
         fusedLocationClient.requestLocationUpdates(createLocationRequest(), locationCallback, null);
         setDestinationButton.setOnClickListener(new View.OnClickListener() {
@@ -214,12 +210,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     double longitude = destLatLng.longitude;
                     String message = "Distance to destination: " + currentLocation.distanceTo(destLocation);
                     //Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destLatLng, 15f));
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destLatLng, 15f));
 
                 }
             }
         });
-        googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
                 if (destinationMarker != null) {
@@ -228,7 +224,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 // Add a marker at the tapped location
-                destinationMarker = googleMap.addMarker(new MarkerOptions()
+                destinationMarker = mMap.addMarker(new MarkerOptions()
                         .position(latLng)
                         .title("Tapped Location"));
                 clickedLatLng = latLng;
@@ -236,7 +232,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
                 return true;
@@ -254,10 +250,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     destinationMarker.remove();
                 }
                 if (selectedLatLng != null) {
-                    destinationMarker = googleMap.addMarker(new MarkerOptions()
+                    destinationMarker = mMap.addMarker(new MarkerOptions()
                             .position(selectedLatLng)
                             .title(place.getName()));
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(selectedLatLng, 15f));
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(selectedLatLng, 15f));
                     clickedLatLng = selectedLatLng;
                     setDestinationButton.setVisibility(View.VISIBLE);
                 }
@@ -282,16 +278,79 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     };
 
 
+//    @SuppressLint("MissingPermission")
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults); // Call the superclass method
+//        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                permissionDenied = false;
+//
+//                mMap.setMyLocationEnabled(true);
+//            }
+//        } else {
+//            permissionDenied = true;
+//        }
+//    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults); // Call the superclass method
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 permissionDenied = false;
+                // Permission was granted
+                enableMyLocation();
+            } else {
+                permissionDenied = true;
+                // Permission was denied. Disable the functionality that depends on this permission.
+                showPermissionRationaleDialog();
             }
-        } else {
-            permissionDenied = true;
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void enableMyLocation() {
+        if (mMap != null) {
+            // Check if permission is granted
+            if (ContextCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED) {
+                mMap.setMyLocationEnabled(true);
+
+                // Get the last known location and move the camera
+                fusedLocationClient.getLastLocation()
+                        .addOnSuccessListener(this, location -> {
+                            if (location != null) {
+                                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
+                                currentLatLng = currentLocation;
+                            } else {
+                                // Handle case where location is null
+                            }
+                        });
+            } else {
+                // Show rationale and request permission.
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        LOCATION_PERMISSION_REQUEST_CODE);
+            }
+        }
+    }
+
+    private void showPermissionRationaleDialog() {
+        new AlertDialog.Builder(this)
+                .setMessage("Location permission is required for this app to function. Would you like to try again?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    // Prompt the user once explanation has been shown
+                    ActivityCompat.requestPermissions(MapsActivity.this,
+                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                            LOCATION_PERMISSION_REQUEST_CODE);
+                })
+                .setNegativeButton("No", (dialog, which) -> {
+                    // Exit app
+                    finish();
+                })
+                .create()
+                .show();
     }
 
     private LocationRequest createLocationRequest() {
