@@ -48,6 +48,7 @@ public class CompassActivity extends AppCompatActivity {
     private float[] accelerometerValues = new float[3];
     private float[] gravityValues = new float[3];
     private Integer[] phoneData = new Integer[3]; //distance, delta bearing, bearing latlng
+    private String weather;
 
     private float headingDegrees = 0f;
 
@@ -341,11 +342,16 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     private void unpackData(String data){
-        String[] arr = data.replaceAll("\\s+","").split(",");
-        int i = 0;
-        for (String s : arr){
-            phoneData[i] = Integer.valueOf(s);
-            i++;
+        String[] type = data.replaceAll("\\s+","").split(":");
+        String[] arr = type[1].split(",");
+        if(type[0] == "0") {
+            int i = 0;
+            for (String s : arr) {
+                phoneData[i] = Integer.valueOf(s);
+                i++;
+            }
+        }else if (type[0] == "1"){
+            weather = arr[0];
         }
 
     }
