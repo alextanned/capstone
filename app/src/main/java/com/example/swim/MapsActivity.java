@@ -478,13 +478,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(popFirst > 0.2 || popSecond > 0.2){
                     ServerActivity serverService = ServerActivity.getInstance();
                     if (serverService != null && serverService.getClient() != null) {
-                        serverService.sendWeatherData("0:","pop");
+                        serverService.sendWeatherData("1:","pop");
                     }
                 }
                 if (windFirst > 30 || windSecond > 30){
                     ServerActivity serverService = ServerActivity.getInstance();
                     if (serverService != null && serverService.getClient() != null) {
-                        serverService.sendWeatherData("0:","wind");
+                        serverService.sendWeatherData("1:","wind");
                     }
                 }
 
