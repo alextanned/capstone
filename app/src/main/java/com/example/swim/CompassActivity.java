@@ -11,8 +11,10 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Handler;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
@@ -39,6 +41,7 @@ public class CompassActivity extends AppCompatActivity {
     private PerspectiveImageView compassImageView;
     private TextView headingTextView;
     private TextView directionTextView;
+    private ImageView cloudImageView;
     private SensorManager sensorManager;
     private Sensor magneticFieldSensor;
     private Sensor rotationVectorSensor;
@@ -58,6 +61,9 @@ public class CompassActivity extends AppCompatActivity {
     private volatile boolean destroy;
     private float prevAzimuth = -1000;
     private boolean orientation = false;
+    private Handler handler = new Handler();
+    private int flashCount = 0;
+    private boolean flashSequenceStarted = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,6 +77,8 @@ public class CompassActivity extends AppCompatActivity {
         headingTextView = findViewById(R.id.headingTextView);
         Log.d("onCreate", "OnCreate");
         directionTextView = findViewById(R.id.directionTextView);
+
+        cloudImageView = findViewById(R.id.cloudImageView);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -138,6 +146,7 @@ public class CompassActivity extends AppCompatActivity {
         }
         executorService.shutdown();
         destroy = true;
+        handler.removeCallbacksAndMessages(null);
     }
 
     private void connectToServer() {
@@ -164,16 +173,20 @@ public class CompassActivity extends AppCompatActivity {
                         byte[] buffer = new byte[20];
                         int bytes;
                         bytes = inputStream.read(buffer);
-                        Log.d("bytes:", String.valueOf(bytes));
+
                         while (bytes != -1) {
-                            Log.d("connection", "received");
+                            Log.d("bytes:", String.valueOf(bytes));
                             String receivedMessage = new String(buffer, 0, bytes);
+                            Log.d("received", receivedMessage);
                             unpackData(receivedMessage);
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    headingTextView.setText(String.valueOf(phoneData[0]) + "m\n");
-                                    Log.d("Message", String.valueOf(phoneData[0]));
+                                    if (phoneData[0] != null){
+                                        headingTextView.setText(phoneData[0] + "m\n");
+                                        Log.d("Message", String.valueOf(phoneData[0]));
+                                    }
+
                                 }
                             });
                             bytes = inputStream.read(buffer);
@@ -266,7 +279,7 @@ public class CompassActivity extends AppCompatActivity {
             }
         }
         SensorManager.getOrientation(adjustedRotationMatrix, orientationValues);
-        Log.d("gravity", Arrays.toString(gravityValues));
+//        Log.d("gravity", Arrays.toString(gravityValues));
 
 
 
@@ -342,16 +355,26 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     private void unpackData(String data){
+        if (data.replaceAll("\\s+","") == ""){
+            return;
+        }
         String[] type = data.replaceAll("\\s+","").split(":");
+        Log.d("SPLIT",type[1]);
         String[] arr = type[1].split(",");
-        if(type[0] == "0") {
+        if(type[0].equals("0")) {
             int i = 0;
             for (String s : arr) {
                 phoneData[i] = Integer.valueOf(s);
                 i++;
             }
-        }else if (type[0] == "1"){
+            if(flashSequenceStarted){
+                stopFlashingSequence();
+            }
+        }else if (type[0].equals("1")){
             weather = arr[0];
+            if (!flashSequenceStarted){
+                startFlashingSequence();
+            }
         }
 
     }
@@ -362,6 +385,64 @@ public class CompassActivity extends AppCompatActivity {
         final String address = Formatter.formatIpAddress(dhcp.gateway);
         Log.d("router: ", address);
         return address;
+    }
+    private void stopFlashingSequence() {
+        // Use runOnUiThread to update the UI on the main thread
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // Remove any pending callbacks from the handler
+                handler.removeCallbacksAndMessages(null);
+
+                // Hide the icon by setting its visibility to invisible
+                cloudImageView.setVisibility(View.INVISIBLE);
+
+                // Reset the flash count
+                flashCount = 0;
+            }
+        });
+        flashSequenceStarted = false;
+    }
+
+
+    // Method to start the flashing sequence
+    private void startFlashingSequence() {
+        flashSequenceStarted = true;
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Toggle visibility
+                        if (cloudImageView.getVisibility() == View.VISIBLE) {
+                            cloudImageView.setVisibility(View.INVISIBLE);
+                        } else {
+                            cloudImageView.setVisibility(View.VISIBLE);
+                        }
+                    }
+                });
+                flashCount++;
+
+                // Check if 3 flashes have occurred
+                if (flashCount < 3) {
+                    // Schedule the next flash after a 1-second interval
+                    handler.postDelayed(this, 1000);
+                } else {
+                    // Reset flash count
+                    flashCount = 0;
+
+                    // Schedule the next flashing sequence after a 5-second interval
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            startFlashingSequence();
+                        }
+                    }, 5000);
+                }
+            }
+        }, 1000); // Start the first flash after a 1-second delay
+
     }
 
 }

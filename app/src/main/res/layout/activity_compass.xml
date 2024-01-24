@@ -11,6 +11,18 @@
         android:layout_height="match_parent"
         tools:context=".CompassActivity">
 
+        <ImageView
+            android:id="@+id/cloudImageView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/cloud"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:visibility="invisible"
+            android:layout_marginLeft="16dp" />
+
         <com.example.swim.PerspectiveImageView
             android:id="@+id/compassImageView"
             android:layout_width="200dp"
