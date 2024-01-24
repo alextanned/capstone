@@ -76,7 +76,7 @@ public class ServerActivity extends Service {
         });
     }
 
-    public void sendLocationData(String distance, String bearing, String absoluteBearing) {
+    public void sendLocationData(String distance, String bearing, String absoluteBearing, String messageType) {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
@@ -106,7 +106,48 @@ public class ServerActivity extends Service {
                         // Define the fixed string length
                         int fixedLength = 20;
                         // Use String.format to pad the string with spaces
-                        String paddedString = String.format("%-" + fixedLength + "s", dataToSend);
+                        String paddedString = String.format("%s%-" + fixedLength + "s", messageType, dataToSend);
+                        OutputStream outputStream = clientSocket.getOutputStream();
+                        outputStream.write(paddedString.getBytes());
+                        outputStream.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+    }
+    public void sendWeatherData(String messageType, String weather) {
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                //Log.d(TAG,"sendlcation");
+                if(clientSocket != null) {
+                    try{
+                        clientSocket.setSoTimeout(10);
+                        InputStream inputStream = clientSocket.getInputStream();
+                        //Log.d(TAG,"blocking");
+                        // If the client sends nothing, just wait for -1 indicating the client closed the connection
+                        if (inputStream.read() == -1) {
+                            //Log.d(TAG, "Client disconnected");
+                            inputStream.close();
+                            clientSocket.close();
+                            clientSocket = null;
+                            clientSocket = serverSocket.accept();
+                            //Log.d(TAG, "Connection Accepted");
+                        }
+                    }catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (clientSocket != null && !clientSocket.isClosed()) {
+                    try {
+                        //Log.d(TAG,"SEND MESSAGE");
+                        // Define the fixed string length
+                        int fixedLength = 20;
+                        // Use String.format to pad the string with spaces
+                        String paddedString = String.format("%s%-" + fixedLength + "s", messageType, weather);
                         OutputStream outputStream = clientSocket.getOutputStream();
                         outputStream.write(paddedString.getBytes());
                         outputStream.flush();

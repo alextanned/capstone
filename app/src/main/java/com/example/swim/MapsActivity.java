@@ -392,7 +392,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Get a reference to the MyServerService
         ServerActivity serverService = ServerActivity.getInstance();
         if (serverService != null && serverService.getClient() != null) {
-            serverService.sendLocationData(distance, bearing,absoluteBearing);
+            serverService.sendLocationData(distance, bearing,absoluteBearing,"0:");
         }
     }
 
@@ -476,10 +476,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 }
                 if(popFirst > 0.2 || popSecond > 0.2){
-                    //update UI
+                    ServerActivity serverService = ServerActivity.getInstance();
+                    if (serverService != null && serverService.getClient() != null) {
+                        serverService.sendWeatherData("0:","pop");
+                    }
                 }
                 if (windFirst > 30 || windSecond > 30){
-                    //update UI
+                    ServerActivity serverService = ServerActivity.getInstance();
+                    if (serverService != null && serverService.getClient() != null) {
+                        serverService.sendWeatherData("0:","wind");
+                    }
                 }
 
             } catch (Exception e) {
