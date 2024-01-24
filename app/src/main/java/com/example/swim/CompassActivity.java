@@ -54,7 +54,7 @@ public class CompassActivity extends AppCompatActivity {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Socket socket = null;
     static final float ALPHA = 0.25f;
-    boolean destroy;
+    private volatile boolean destroy;
     private float prevAzimuth = -1000;
     private boolean orientation = false;
     @Override
@@ -253,9 +253,9 @@ public class CompassActivity extends AppCompatActivity {
 //        SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, adjustedRotationMatrix);
 //        SensorManager.getOrientation(adjustedRotationMatrix, orientationValues);
         if (orientation){
-            if (gravityValues[1] < 0){
-                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Z, adjustedRotationMatrix);
-            }
+//            if (gravityValues[1] < 0){
+//                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Z, adjustedRotationMatrix);
+//            }
             SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, adjustedRotationMatrix);
         } else{
             if (gravityValues[2] <0 ){
@@ -299,7 +299,7 @@ public class CompassActivity extends AppCompatActivity {
         // Update your compass UI element (e.g., rotate compassImageView). Not used right now
 //         compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
 
-        compassImageView.setPerspectiveRotation(newAzimuth);
+        compassImageView.setPerspectiveRotation(-newAzimuth);
     }
 
     private int heuristicHeading(float azimuth) {
