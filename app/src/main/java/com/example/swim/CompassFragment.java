@@ -9,34 +9,27 @@ import android.hardware.SensorManager;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
+
+import androidx.fragment.app.Fragment;
 
 import android.os.Handler;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
 import java.net.Socket;
-import java.net.SocketException;
-import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.example.swim.PerspectiveImageView;
 
-
-public class CompassActivity extends AppCompatActivity {
+public class CompassFragment extends Fragment {
 
     private PerspectiveImageView compassImageView;
     private TextView headingTextView;
@@ -65,22 +58,24 @@ public class CompassActivity extends AppCompatActivity {
     private int flashCount = 0;
     private boolean flashSequenceStarted = false;
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        View view = inflater.inflate(R.layout.fragment_compass, container, false);
+        setRetainInstance(true);
+//        getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        setContentView(R.layout.activity_compass);
+//        setContentView(R.layout.activity_compass);
 
         // Initialize UI elements
-        compassImageView = findViewById(R.id.compassImageView);
+        compassImageView = view.findViewById(R.id.compassImageView);
 
-        headingTextView = findViewById(R.id.headingTextView);
+        headingTextView = view.findViewById(R.id.headingTextView);
         Log.d("onCreate", "OnCreate");
-        directionTextView = findViewById(R.id.directionTextView);
+        directionTextView = view.findViewById(R.id.directionTextView);
 
-        cloudImageView = findViewById(R.id.cloudImageView);
+        cloudImageView = view.findViewById(R.id.cloudImageView);
 
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        sensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
         sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
@@ -105,10 +100,10 @@ public class CompassActivity extends AppCompatActivity {
 
         destroy = false;
         connectToServer();
-
+        return view;
     }
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         // Register the sensor listener when the activity is resumed
         if (rotationVectorSensor != null) {
@@ -123,15 +118,15 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
         // Unregister the sensor listener when the activity is paused
         sensorManager.unregisterListener(sensorEventListener);
     }
 
     @Override
-    protected void onDestroy(){
-        super.onDestroy();
+    public void onDestroyView(){
+        super.onDestroyView();
         Log.d("onDestrony", "destroy");
         if (socket != null && !socket.isClosed()) {
             Log.d("onDestroy", "close socket");
@@ -163,7 +158,7 @@ public class CompassActivity extends AppCompatActivity {
                 while (!connected && attempts < maxAttempts && !destroy) {
                     Log.d("debug connected", String.valueOf(connected));
                     try {
-                        String serverIP = getRouterIp();
+                        String serverIP = getRouterIp(getContext());
                         int port = 12345;
                         InetAddress ip = InetAddress.getByName(serverIP);
                         socket = new Socket(ip, port);
@@ -179,7 +174,7 @@ public class CompassActivity extends AppCompatActivity {
                             String receivedMessage = new String(buffer, 0, bytes);
                             Log.d("received", receivedMessage);
                             unpackData(receivedMessage);
-                            runOnUiThread(new Runnable() {
+                            getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
                                     if (phoneData[0] != null){
@@ -324,6 +319,8 @@ public class CompassActivity extends AppCompatActivity {
                 relativeHeading += 360;
             }
 
+        } else {
+            relativeHeading = (int) azimuth;
         }
         return relativeHeading;
     }
@@ -353,6 +350,14 @@ public class CompassActivity extends AppCompatActivity {
         }
         return output;
     }
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            // Perform the cube transition to the new fragment
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 
     private void unpackData(String data){
         if (data.replaceAll("\\s+","") == ""){
@@ -379,8 +384,8 @@ public class CompassActivity extends AppCompatActivity {
 
     }
 
-    private String getRouterIp() {
-        final WifiManager manager = (WifiManager) super.getApplicationContext().getSystemService(WIFI_SERVICE);
+    private String getRouterIp(Context context) {
+        final WifiManager manager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         final DhcpInfo dhcp = manager.getDhcpInfo();
         final String address = Formatter.formatIpAddress(dhcp.gateway);
         Log.d("router: ", address);
@@ -388,7 +393,7 @@ public class CompassActivity extends AppCompatActivity {
     }
     private void stopFlashingSequence() {
         // Use runOnUiThread to update the UI on the main thread
-        runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 // Remove any pending callbacks from the handler
@@ -411,7 +416,7 @@ public class CompassActivity extends AppCompatActivity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                runOnUiThread(new Runnable() {
+                getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         // Toggle visibility

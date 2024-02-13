@@ -22,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
         openCompassButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, CompassActivity.class);
+                Intent intent = new Intent(MainActivity.this, HostActivity.class);
                 startActivity(intent);
             }
         });
