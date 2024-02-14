@@ -29,8 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-public class CompassFragment extends Fragment {
-
+public class CompassFragment extends Fragment implements HostActivity.ServerDataListener{
     private PerspectiveImageView compassImageView;
     private TextView headingTextView;
     private TextView directionTextView;
@@ -48,7 +47,7 @@ public class CompassFragment extends Fragment {
 
     private float headingDegrees = 0f;
 
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     private Socket socket = null;
     static final float ALPHA = 0.25f;
     private volatile boolean destroy;
@@ -99,7 +98,6 @@ public class CompassFragment extends Fragment {
         sensorManager.registerListener(sensorEventListener, gravitySensor, SensorManager.SENSOR_DELAY_UI);
 
         destroy = false;
-        connectToServer();
         return view;
     }
     @Override
@@ -125,6 +123,21 @@ public class CompassFragment extends Fragment {
     }
 
     @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        if (context instanceof HostActivity) {
+            ((HostActivity) context).setServerDataListener(this);
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        if (getActivity() instanceof HostActivity) {
+            ((HostActivity) getActivity()).setServerDataListener(null);
+        }
+    }
+    @Override
     public void onDestroyView(){
         super.onDestroyView();
         Log.d("onDestrony", "destroy");
@@ -139,77 +152,12 @@ public class CompassFragment extends Fragment {
                 e.printStackTrace();
             }
         }
-        executorService.shutdown();
+//        executorService.shutdown();
         destroy = true;
         handler.removeCallbacksAndMessages(null);
     }
 
-    private void connectToServer() {
-        //String serverIP = "192.168.159.119";
 
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                boolean connected = false;
-                int attempts = 0;
-                int maxAttempts = 1000; // Max number of reconnection attempts
-                int retryInterval = 100; // Time to wait before retrying (in milliseconds)
-
-                while (!connected && attempts < maxAttempts && !destroy) {
-                    Log.d("debug connected", String.valueOf(connected));
-                    try {
-                        String serverIP = getRouterIp(getContext());
-                        int port = 12345;
-                        InetAddress ip = InetAddress.getByName(serverIP);
-                        socket = new Socket(ip, port);
-                        connected = true;
-                        Log.d("connetion", "conneted");
-                        InputStream inputStream = socket.getInputStream();
-                        byte[] buffer = new byte[20];
-                        int bytes;
-                        bytes = inputStream.read(buffer);
-
-                        while (bytes != -1) {
-                            Log.d("bytes:", String.valueOf(bytes));
-                            String receivedMessage = new String(buffer, 0, bytes);
-                            Log.d("received", receivedMessage);
-                            unpackData(receivedMessage);
-                            getActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (phoneData[0] != null){
-                                        headingTextView.setText(phoneData[0] + "m\n");
-                                        Log.d("Message", String.valueOf(phoneData[0]));
-                                    }
-
-                                }
-                            });
-                            bytes = inputStream.read(buffer);
-                        }
-
-                        connected = false; //if reached this line, this means server
-                        inputStream.close();
-                    } catch (IOException e) {
-//                        e.printStackTrace();
-                        attempts++;
-                        connected = false;
-                        Log.d("connections",String.valueOf(destroy));
-                        Log.d("connection", "disconnecteds");
-                        try {
-                            Thread.sleep(retryInterval); // Wait before retrying
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                }
-                if (!connected) {
-                    // Handle the scenario when all reconnection attempts fail
-                    // Update UI accordingly
-                    Log.d("Connection", "max attempts reached");
-                }
-            }
-        });
-    }
 
     private SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
@@ -299,16 +247,27 @@ public class CompassFragment extends Fragment {
     }
 
     private void updateUI(float azimuth) {
-
-        String heading = calculateCompassHeading(azimuth);
-        directionTextView.setText(heading);
-//
         int newAzimuth = heuristicHeading(azimuth);
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+
+                String heading = calculateCompassHeading(azimuth);
+                directionTextView.setText(heading);
+                if (phoneData[0] != null){
+                    headingTextView.setText(phoneData[0] + "m\n");
+                    Log.d("Message", String.valueOf(phoneData[0]));
+                }
+//
+
 //        Log.d("newAz", String.valueOf(newAzimuth));
-        // Update your compass UI element (e.g., rotate compassImageView). Not used right now
+                // Update your compass UI element (e.g., rotate compassImageView). Not used right now
 //         compassImageView.setRotation(newAzimuth); // Negative to make the arrow point in the correct direction.
 
-        compassImageView.setPerspectiveRotation(-newAzimuth);
+                compassImageView.setPerspectiveRotation(-newAzimuth);
+            }
+        });
     }
 
     private int heuristicHeading(float azimuth) {
@@ -319,7 +278,7 @@ public class CompassFragment extends Fragment {
                 relativeHeading += 360;
             }
 
-        } else {
+        } else { //no data, act as compass for debugging
             relativeHeading = (int) azimuth;
         }
         return relativeHeading;
@@ -350,16 +309,9 @@ public class CompassFragment extends Fragment {
         }
         return output;
     }
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-            // Perform the cube transition to the new fragment
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
 
-    private void unpackData(String data){
+    @Override
+    public void onPhoneDataReceived(String data) {
         if (data.replaceAll("\\s+","") == ""){
             return;
         }
@@ -384,13 +336,32 @@ public class CompassFragment extends Fragment {
 
     }
 
-    private String getRouterIp(Context context) {
-        final WifiManager manager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        final DhcpInfo dhcp = manager.getDhcpInfo();
-        final String address = Formatter.formatIpAddress(dhcp.gateway);
-        Log.d("router: ", address);
-        return address;
-    }
+//    private void unpackData(String data){
+//        if (data.replaceAll("\\s+","") == ""){
+//            return;
+//        }
+//        String[] type = data.replaceAll("\\s+","").split(":");
+//        Log.d("SPLIT",type[1]);
+//        String[] arr = type[1].split(",");
+//        if(type[0].equals("0")) {
+//            int i = 0;
+//            for (String s : arr) {
+//                phoneData[i] = Integer.valueOf(s);
+//                i++;
+//            }
+//            if(flashSequenceStarted){
+//                stopFlashingSequence();
+//            }
+//        }else if (type[0].equals("1")){
+//            weather = arr[0];
+//            if (!flashSequenceStarted){
+//                startFlashingSequence();
+//            }
+//        }
+//
+//    }
+
+
     private void stopFlashingSequence() {
         // Use runOnUiThread to update the UI on the main thread
         getActivity().runOnUiThread(new Runnable() {
