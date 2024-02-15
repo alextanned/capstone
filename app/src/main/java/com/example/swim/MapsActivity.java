@@ -87,6 +87,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double popSecond = 0.0;
     private double windFirst = 0.0;
     private double windSecond = 0.0;
+    private String typeFirst = "";
+    private String typeSecond = "";
 
 
     /**
@@ -434,7 +436,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             String apiKey = "c8edce8fa32d1e7aefaa91f0003d0bfe";
             String urlString = "https://api.openweathermap.org/data/2.5/forecast?lat=" + location.latitude + "&lon="
                     + location.longitude + "&appid=" + apiKey;
-
+            Log.d("de",urlString);
             try {
                 URL url = new URL(urlString);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -466,11 +468,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 if (list.length() > 0) {
                    popFirst = list.getJSONObject(0).getDouble("pop");
+                   typeFirst = list.getJSONObject(0).getJSONObject("weather").getString("main");
                    windFirst = list.getJSONObject(0).getJSONObject("wind").getDouble("speed") * 3.6;
                    Log.d("weather","First time period POP: " + popFirst);
 
                     if (list.length() > 1) {
                         popSecond = list.getJSONObject(1).getDouble("pop");
+                        typeSecond = list.getJSONObject(0).getJSONObject("weather").getString("main");
                         windSecond = list.getJSONObject(1).getJSONObject("wind").getDouble("speed") * 3.6;
                         Log.d("weather","Second time period POP: " + popSecond);
                     }
@@ -478,7 +482,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(popFirst > 0.2 || popSecond > 0.2){
                     ServerActivity serverService = ServerActivity.getInstance();
                     if (serverService != null && serverService.getClient() != null) {
-                        serverService.sendWeatherData("1:","pop");
+                        if (typeFirst == "Thunderstorm" || typeSecond == "Thunderstorm") {
+                            serverService.sendWeatherData("1:", "thunderstorm");
+                        } else if(typeFirst == "Rain" || typeSecond == "Rain"){
+                            serverService.sendWeatherData("1:", "rain");
+                        } else if(typeFirst == "Drizzle" || typeSecond == "Drizzle"){
+                            serverService.sendWeatherData("1:", "rain");
+                        } else if(typeFirst == "Snow" || typeSecond == "Snow"){
+                            serverService.sendWeatherData("1:", "snow");
+                        }
                     }
                 }
                 if (windFirst > 30 || windSecond > 30){
