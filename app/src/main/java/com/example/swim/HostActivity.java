@@ -7,8 +7,10 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,8 +30,12 @@ public class HostActivity extends AppCompatActivity {
 
     private ServerDataListener serverDataListener;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private Socket socket;
+    private Socket socket = null;
     private volatile boolean destroy = false;
+
+    private int currentFragmentIndex = 0;
+    private final Fragment[] fragments = new Fragment[2]; // Adjust size as needed for more fragments
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,15 +52,56 @@ public class HostActivity extends AppCompatActivity {
             }
 
             // Create a new Fragment to be placed in the activity layout
-            CompassFragment firstFragment = new CompassFragment();
+            fragments[0] = new CompassFragment(); // Index 0 for CompassFragment
+            fragments[1] = new StopwatchFragment(); // Index 1 for StopwatchFragment, make sure you create this class
 
             // Add the fragment to the 'fragment_container' FrameLayout
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.fragment_container, firstFragment).commit();
+                    .add(R.id.fragment_container, fragments[0]).commit();
         }
 
         connectToServer();
     }
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d("key", String.valueOf(keyCode));
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                cycleFragment(true);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                cycleFragment(false);
+                return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    private void cycleFragment(boolean forward) {
+        if (forward) {
+            currentFragmentIndex = (currentFragmentIndex + 1) % fragments.length;
+            getSupportFragmentManager().beginTransaction()
+                    .setCustomAnimations(
+                            R.anim.scale_up_slide_in_right, // Updated for incoming fragment
+                            R.anim.scale_down_slide_out_left,
+                            R.anim.scale_up_slide_in_left, // For popBackStack
+                            R.anim.scale_down_slide_out_right) // For popBackStack
+                    .replace(R.id.fragment_container, fragments[currentFragmentIndex])
+                    .commit();
+        } else {
+            currentFragmentIndex = (currentFragmentIndex - 1 + fragments.length) % fragments.length;
+            getSupportFragmentManager().beginTransaction()
+                    .setCustomAnimations(
+                            R.anim.scale_up_slide_in_left, // Updated for incoming fragment
+                            R.anim.scale_down_slide_out_right,
+                            R.anim.scale_up_slide_in_right, // For popBackStack
+                            R.anim.scale_down_slide_out_left) // For popBackStack
+                    .replace(R.id.fragment_container, fragments[currentFragmentIndex])
+                    .commit();
+        }
+    }
+
+
+
     public void setServerDataListener(ServerDataListener listener) {
         this.serverDataListener = listener;
     }

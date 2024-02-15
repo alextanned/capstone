@@ -33,7 +33,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
     private PerspectiveImageView compassImageView;
     private TextView headingTextView;
     private TextView directionTextView;
-    private ImageView cloudImageView;
+    private ImageView weatherImageView;
     private SensorManager sensorManager;
     private Sensor magneticFieldSensor;
     private Sensor rotationVectorSensor;
@@ -43,7 +43,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
     private float[] accelerometerValues = new float[3];
     private float[] gravityValues = new float[3];
     private Integer[] phoneData = new Integer[3]; //distance, delta bearing, bearing latlng
-    private String weather;
+    private int weather;
 
     private float headingDegrees = 0f;
 
@@ -56,6 +56,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
     private Handler handler = new Handler();
     private int flashCount = 0;
     private boolean flashSequenceStarted = false;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -72,7 +73,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
         Log.d("onCreate", "OnCreate");
         directionTextView = view.findViewById(R.id.directionTextView);
 
-        cloudImageView = view.findViewById(R.id.cloudImageView);
+        weatherImageView = view.findViewById(R.id.weatherImageView);
 
         sensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -279,7 +280,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
             }
 
         } else { //no data, act as compass for debugging
-            relativeHeading = (int) azimuth;
+            relativeHeading = - (int) azimuth;
         }
         return relativeHeading;
     }
@@ -319,6 +320,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
         Log.d("SPLIT",type[1]);
         String[] arr = type[1].split(",");
         if(type[0].equals("0")) {
+            weather = 0;
             int i = 0;
             for (String s : arr) {
                 phoneData[i] = Integer.valueOf(s);
@@ -327,39 +329,45 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
             if(flashSequenceStarted){
                 stopFlashingSequence();
             }
-        }else if (type[0].equals("1")){
-            weather = arr[0];
+        }else if (!type[0].equals("0")){
+            // 1 thunder 2 rain 3 rain 4 snow 5 wind
+            weather = Integer.valueOf(type[0]);
+            Log.d("weather", arr[0]);
+            if (weather != 0) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        switch (weather) {
+                            case 1:
+                                weatherImageView.setImageResource(R.drawable.thunder);
+                                break;
+
+                            case 2:
+                                weatherImageView.setImageResource(R.drawable.rain);
+                                break;
+
+                            case 3:
+                                weatherImageView.setImageResource(R.drawable.rain);
+                                break;
+
+                            case 4:
+                                weatherImageView.setImageResource(R.drawable.snow);
+                                break;
+
+                            case 5:
+                                weatherImageView.setImageResource(R.drawable.wind);
+                                break;
+
+                        }
+                    }
+                });
+            }
             if (!flashSequenceStarted){
                 startFlashingSequence();
             }
         }
 
     }
-
-//    private void unpackData(String data){
-//        if (data.replaceAll("\\s+","") == ""){
-//            return;
-//        }
-//        String[] type = data.replaceAll("\\s+","").split(":");
-//        Log.d("SPLIT",type[1]);
-//        String[] arr = type[1].split(",");
-//        if(type[0].equals("0")) {
-//            int i = 0;
-//            for (String s : arr) {
-//                phoneData[i] = Integer.valueOf(s);
-//                i++;
-//            }
-//            if(flashSequenceStarted){
-//                stopFlashingSequence();
-//            }
-//        }else if (type[0].equals("1")){
-//            weather = arr[0];
-//            if (!flashSequenceStarted){
-//                startFlashingSequence();
-//            }
-//        }
-//
-//    }
 
 
     private void stopFlashingSequence() {
@@ -371,7 +379,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
                 handler.removeCallbacksAndMessages(null);
 
                 // Hide the icon by setting its visibility to invisible
-                cloudImageView.setVisibility(View.INVISIBLE);
+                weatherImageView.setVisibility(View.INVISIBLE);
 
                 // Reset the flash count
                 flashCount = 0;
@@ -391,10 +399,10 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
                     @Override
                     public void run() {
                         // Toggle visibility
-                        if (cloudImageView.getVisibility() == View.VISIBLE) {
-                            cloudImageView.setVisibility(View.INVISIBLE);
+                        if (weatherImageView.getVisibility() == View.VISIBLE) {
+                            weatherImageView.setVisibility(View.INVISIBLE);
                         } else {
-                            cloudImageView.setVisibility(View.VISIBLE);
+                            weatherImageView.setVisibility(View.VISIBLE);
                         }
                     }
                 });
@@ -403,7 +411,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
                 // Check if 3 flashes have occurred
                 if (flashCount < 3) {
                     // Schedule the next flash after a 1-second interval
-                    handler.postDelayed(this, 1000);
+                    handler.postDelayed(this, 500);
                 } else {
                     // Reset flash count
                     flashCount = 0;
@@ -417,7 +425,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
                     }, 5000);
                 }
             }
-        }, 1000); // Start the first flash after a 1-second delay
+        }, 100); // Start the first flash after a 1-second delay
 
     }
 
