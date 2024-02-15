@@ -485,18 +485,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         if (typeFirst == "Thunderstorm" || typeSecond == "Thunderstorm") {
                             serverService.sendWeatherData("1:", "thunderstorm");
                         } else if(typeFirst == "Rain" || typeSecond == "Rain"){
-                            serverService.sendWeatherData("1:", "rain");
+                            serverService.sendWeatherData("2:", "rain");
                         } else if(typeFirst == "Drizzle" || typeSecond == "Drizzle"){
-                            serverService.sendWeatherData("1:", "rain");
+                            serverService.sendWeatherData("3:", "rain");
                         } else if(typeFirst == "Snow" || typeSecond == "Snow"){
-                            serverService.sendWeatherData("1:", "snow");
+                            serverService.sendWeatherData("4:", "snow");
                         }
                     }
                 }
-                if (windFirst > 30 || windSecond > 30){
+                else if (windFirst > 30 || windSecond > 30){
                     ServerActivity serverService = ServerActivity.getInstance();
                     if (serverService != null && serverService.getClient() != null) {
-                        serverService.sendWeatherData("1:","wind");
+                        serverService.sendWeatherData("5:","wind");
                     }
                 }
 
