@@ -99,6 +99,13 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
         sensorManager.registerListener(sensorEventListener, gravitySensor, SensorManager.SENSOR_DELAY_UI);
 
         destroy = false;
+        weather = 4;
+        weatherImageView.setImageResource(R.drawable.rain);
+        if (!flashSequenceStarted){
+            startFlashingSequence();
+
+
+        }
         return view;
     }
     @Override
@@ -332,6 +339,7 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
         }else if (!type[0].equals("0")){
             // 1 thunder 2 rain 3 rain 4 snow 5 wind
             weather = Integer.valueOf(type[0]);
+//            weather = 4;
             Log.d("weather", arr[0]);
             if (weather != 0) {
                 getActivity().runOnUiThread(new Runnable() {
@@ -391,42 +399,36 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
 
     // Method to start the flashing sequence
     private void startFlashingSequence() {
+        Log.d("flash", "start sequence");
         flashSequenceStarted = true;
-        handler.postDelayed(new Runnable() {
+        flashCount = 0; // Reset flash count at the start
+
+        // Runnable that toggles visibility and schedules itself based on flashCount
+        Runnable flashRunnable = new Runnable() {
             @Override
             public void run() {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Toggle visibility
-                        if (weatherImageView.getVisibility() == View.VISIBLE) {
-                            weatherImageView.setVisibility(View.INVISIBLE);
-                        } else {
-                            weatherImageView.setVisibility(View.VISIBLE);
-                        }
-                    }
-                });
+                // Toggle visibility
+                if (weatherImageView.getVisibility() == View.VISIBLE) {
+                    weatherImageView.setVisibility(View.INVISIBLE);
+                } else {
+                    weatherImageView.setVisibility(View.VISIBLE);
+                }
+
                 flashCount++;
 
-                // Check if 3 flashes have occurred
-                if (flashCount < 3) {
-                    // Schedule the next flash after a 1-second interval
-                    handler.postDelayed(this, 500);
-                } else {
-                    // Reset flash count
-                    flashCount = 0;
-
-                    // Schedule the next flashing sequence after a 5-second interval
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            startFlashingSequence();
-                        }
-                    }, 5000);
+                if (flashCount < 6) { // Count both visible and invisible as a part of the flash cycle
+                    // Schedule the next update in 500ms (consistent for both visibility states)
+                    handler.postDelayed(this, 2000);
+                } else if (flashCount == 6) {
+                    // After 3 flashes (6 toggles), wait for 5 seconds before starting the next sequence
+                    handler.postDelayed(this, 5000);
+                    flashCount = 0; // Reset flash count for the next sequence
                 }
             }
-        }, 100); // Start the first flash after a 1-second delay
+        };
 
+        // Start the first flash immediately
+        handler.post(flashRunnable);
     }
 
 }
