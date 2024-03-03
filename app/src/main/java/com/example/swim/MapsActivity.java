@@ -158,6 +158,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 int distance = (int)(currentLocation.distanceTo(destLocation));
                                 int bearingToDest = (int)(currentLocation.bearingTo(destLocation));
                                 sendDataToClient(String.valueOf(distance),String.valueOf(vectorBearing),String.valueOf(bearingToDest));
+
+                                if(trackPath){
+                                    if(path.size() >= 1) {
+                                        LatLng lastSavedPoint = path.get(path.size() - 1);
+                                        if (lastSavedPoint.latitude != currentLoc.latitude && lastSavedPoint.longitude != currentLoc.longitude) {
+                                            path.add(currentLoc);
+                                            Log.d("PATH", "ADDED");
+                                        }
+                                    }else{
+                                        path.add(currentLoc);
+                                        Log.d("PATH", "ADDED");
+                                    }
+                                }
                             }
 
                         }
@@ -236,11 +249,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     showPathButton.setVisibility(View.VISIBLE);
                     trackPath = true;
                     // Add points to the ArrayList
-                    path.add(new LatLng(43.645259, -79.380696)); // Union Station
-                    path.add(new LatLng(43.642566, -79.387057)); // CN Tower
-                    path.add(new LatLng(43.656116, -79.380844)); // Yonge-Dundas Square
-                    path.add(new LatLng(43.667709, -79.394777)); // Royal Ontario Museum (ROM)
-                    path.add(new LatLng(43.6387, -79.3833));     // Harbourfront Centre
                     if (drawnPath != null) {
                         drawnPath.remove(); // Remove the polyline from the map
                         drawnPath = null; // Clear the reference
@@ -256,6 +264,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     showPathButton.setVisibility(View.GONE);
                     startPathButton.setVisibility(View.VISIBLE);
                     drawPath();
+                    trackPath = false;
                     path.clear();
                 }
             }
@@ -445,7 +454,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mMap != null) {
             PolylineOptions polylineOptions = new PolylineOptions();
             polylineOptions.color(Color.RED); // Set color of the polyline
-            polylineOptions.width(5); // Set width of the polyline
+            polylineOptions.width(10); // Set width of the polyline
 
             // Add LatLng points to the polyline
             for (LatLng latLng : path) {
