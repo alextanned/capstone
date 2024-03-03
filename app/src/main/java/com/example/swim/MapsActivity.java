@@ -21,6 +21,7 @@ import android.util.Log;
 import android.widget.Button;
 import android.view.View;
 import android.location.Location;
+import android.graphics.Color;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -33,6 +34,8 @@ import com.google.android.gms.common.api.Status;
 import com.example.swim.databinding.ActivityMapsBinding;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationButtonClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationClickListener;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import android.widget.Toast;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -51,6 +54,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import org.json.JSONArray;
@@ -74,6 +78,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng currentLatLng;
     private LatLng prevLatLng;
     private Button setDestinationButton; // Declare the Button variable
+    private Button startPathButton;
+    private Button showPathButton;
     private static final String API_KEY = BuildConfig.API_KEY;
     private AutocompleteSupportFragment autocompleteFragment;
     private LocationCallback locationCallback;
@@ -89,7 +95,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double windSecond = 0.0;
     private String typeFirst = "";
     private String typeSecond = "";
-
+    private List<LatLng> path = new ArrayList<>();
+    private boolean trackPath = false;
+    private Polyline drawnPath; // Reference to the drawn path (polyline)
 
     /**
      * Flag indicating whether a requested permission has been denied after returning in {@link
@@ -111,6 +119,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         setDestinationButton = findViewById(R.id.setDestinationButton); // Initialize the Button
+        startPathButton = findViewById(R.id.startPathButton); // Initialize the Button
+        showPathButton = findViewById(R.id.showPathButton);
         mapFragment.getMapAsync(this);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -217,6 +227,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
+        startPathButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Check if a LatLng has been clicked and stored
+                if (clickedLatLng != null) {
+                    startPathButton.setVisibility(View.GONE);
+                    showPathButton.setVisibility(View.VISIBLE);
+                    trackPath = true;
+                    // Add points to the ArrayList
+                    path.add(new LatLng(43.645259, -79.380696)); // Union Station
+                    path.add(new LatLng(43.642566, -79.387057)); // CN Tower
+                    path.add(new LatLng(43.656116, -79.380844)); // Yonge-Dundas Square
+                    path.add(new LatLng(43.667709, -79.394777)); // Royal Ontario Museum (ROM)
+                    path.add(new LatLng(43.6387, -79.3833));     // Harbourfront Centre
+                    if (drawnPath != null) {
+                        drawnPath.remove(); // Remove the polyline from the map
+                        drawnPath = null; // Clear the reference
+                    }
+                }
+            }
+        });
+        showPathButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Check if a LatLng has been clicked and stored
+                if (clickedLatLng != null) {
+                    showPathButton.setVisibility(View.GONE);
+                    startPathButton.setVisibility(View.VISIBLE);
+                    path.clear();
+                    drawPath();
+                }
+            }
+        });
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
@@ -266,7 +309,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
     }
-    private final Runnable weatherUpdateRunnable = new Runnable() {
+    /*private final Runnable weatherUpdateRunnable = new Runnable() {
         @Override
         public void run() {
             // Update the weather information
@@ -277,7 +320,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             // Schedule the next update
             weatherUpdateHandler.postDelayed(this, WEATHER_UPDATE_INTERVAL);
         }
-    };
+    };*/
 
 
 //    @SuppressLint("MissingPermission")
@@ -398,11 +441,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    private void drawPath() {
+        if (mMap != null) {
+            PolylineOptions polylineOptions = new PolylineOptions();
+            polylineOptions.color(Color.RED); // Set color of the polyline
+            polylineOptions.width(5); // Set width of the polyline
+
+            // Add LatLng points to the polyline
+            for (LatLng latLng : path) {
+                polylineOptions.add(latLng);
+            }
+
+            // Add the polyline to the map
+            Polyline polyline = mMap.addPolyline(polylineOptions);
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         // Start the periodic updates when the activity is in the foreground
-        weatherUpdateHandler.post(weatherUpdateRunnable);
+        //weatherUpdateHandler.post(weatherUpdateRunnable);
     }
 
     @Override
@@ -414,7 +473,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (clickedLatLng != null) {
             saveClickedLatLng(clickedLatLng);
         }
-        weatherUpdateHandler.removeCallbacks(weatherUpdateRunnable);
+        //weatherUpdateHandler.removeCallbacks(weatherUpdateRunnable);
     }
     @Override
     protected void onDestroy() {

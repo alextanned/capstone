@@ -110,6 +110,7 @@ public class ServerActivity extends Service {
                         OutputStream outputStream = clientSocket.getOutputStream();
                         outputStream.write(paddedString.getBytes());
                         outputStream.flush();
+                        Log.d("SEND",paddedString);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
