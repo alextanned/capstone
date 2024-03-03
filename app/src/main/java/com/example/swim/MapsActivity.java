@@ -255,8 +255,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (clickedLatLng != null) {
                     showPathButton.setVisibility(View.GONE);
                     startPathButton.setVisibility(View.VISIBLE);
-                    path.clear();
                     drawPath();
+                    path.clear();
                 }
             }
         });
@@ -453,7 +453,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             // Add the polyline to the map
-            Polyline polyline = mMap.addPolyline(polylineOptions);
+            drawnPath = mMap.addPolyline(polylineOptions);
         }
     }
 
