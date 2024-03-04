@@ -98,6 +98,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private List<LatLng> path = new ArrayList<>();
     private boolean trackPath = false;
     private Polyline drawnPath; // Reference to the drawn path (polyline)
+    private int totalDistance = 0;
 
     /**
      * Flag indicating whether a requested permission has been denied after returning in {@link
@@ -164,6 +165,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         LatLng lastSavedPoint = path.get(path.size() - 1);
                                         if (lastSavedPoint.latitude != currentLoc.latitude && lastSavedPoint.longitude != currentLoc.longitude) {
                                             path.add(currentLoc);
+                                            Location first = convertLatLngToLocation(lastSavedPoint);
+                                            Location second = convertLatLngToLocation(currentLoc);
+                                            totalDistance += (int)(first.distanceTo(second));
                                             Log.d("PATH", "ADDED");
                                         }
                                     }else{
@@ -266,6 +270,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     drawPath();
                     trackPath = false;
                     path.clear();
+                    totalDistance = 0;
                 }
             }
         });
