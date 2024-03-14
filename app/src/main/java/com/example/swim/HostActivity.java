@@ -34,7 +34,7 @@ public class HostActivity extends AppCompatActivity {
     private volatile boolean destroy = false;
 
     private int currentFragmentIndex = 0;
-    private final Fragment[] fragments = new Fragment[2]; // Adjust size as needed for more fragments
+    private final Fragment[] fragments = new Fragment[3]; // Adjust size as needed for more fragments
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +54,7 @@ public class HostActivity extends AppCompatActivity {
             // Create a new Fragment to be placed in the activity layout
             fragments[0] = new CompassFragment(); // Index 0 for CompassFragment
             fragments[1] = new StopwatchFragment(); // Index 1 for StopwatchFragment, make sure you create this class
+            fragments[2] = new SpeedFragment();
 
             // Add the fragment to the 'fragment_container' FrameLayout
             getSupportFragmentManager().beginTransaction()
