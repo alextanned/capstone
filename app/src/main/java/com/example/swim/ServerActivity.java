@@ -80,7 +80,6 @@ public class ServerActivity extends Service {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
-                //Log.d(TAG,"sendlcation");
                 if(clientSocket != null) {
                     try{
                         clientSocket.setSoTimeout(10);
@@ -103,6 +102,7 @@ public class ServerActivity extends Service {
                     try {
                         //Log.d(TAG,"SEND MESSAGE");
                         String dataToSend = distance + "," + bearing + "," + absoluteBearing;
+                        Log.d(TAG,dataToSend);
                         // Define the fixed string length
                         int fixedLength = 20;
                         // Use String.format to pad the string with spaces
