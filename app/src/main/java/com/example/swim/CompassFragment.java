@@ -171,14 +171,16 @@ public class CompassFragment extends Fragment implements HostActivity.ServerData
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor == accelerometer){
+                Log.d("sensor", "accelerometer");
                 accelerometerValues = lowPass(event.values.clone(), accelerometerValues);
             }
             if (event.sensor == gravitySensor){
+                Log.d("sensor", "gravity");
                 gravityValues = event.values;
             }
 //            Log.d("accuracy", String.valueOf(accuracy));
             if (event.sensor == rotationVectorSensor) {
-
+                Log.d("sensor", "rotation vector");
                 float azimuth = calculateAzimuth(event);
                 updateUI(azimuth);
             }

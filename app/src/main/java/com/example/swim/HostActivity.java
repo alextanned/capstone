@@ -121,20 +121,22 @@ public class HostActivity extends AppCompatActivity {
                 while (!connected && attempts < maxAttempts && !destroy) {
                     Log.d("debug connected", String.valueOf(connected));
                     try {
-                        String serverIP = getRouterIp();
-                        int port = 12345;
-                        InetAddress ip = InetAddress.getByName(serverIP);
-                        socket = new Socket(ip, port);
-                        connected = true;
-                        Log.d("connetion", "conneted");
-                        InputStream inputStream = socket.getInputStream();
-                        byte[] buffer = new byte[20];
+//                        String serverIP = getRouterIp();
+//                        int port = 12345;
+//                        InetAddress ip = InetAddress.getByName(serverIP);
+//                        socket = new Socket(ip, port);
+//                        connected = true;
+//                        Log.d("connetion", "conneted");
+//                        InputStream inputStream = socket.getInputStream();
+//                        byte[] buffer = new byte[20];
                         int bytes;
-                        bytes = inputStream.read(buffer);
+//                        bytes = inputStream.read(buffer);
+                        bytes = 1;
                         Log.d("byte size", String.valueOf(bytes));
                         while (bytes != -1) {
                             Log.d("bytes:", String.valueOf(bytes));
-                            String receivedMessage = new String(buffer, 0, bytes);
+//                            String receivedMessage = new String(buffer, 0, bytes);
+                            String receivedMessage = "0:482,300,300";
                             Log.d("received", receivedMessage);
 //                            unpackData(receivedMessage);
 
@@ -151,23 +153,26 @@ public class HostActivity extends AppCompatActivity {
 //
 //                                }
 //                            });
-                            bytes = inputStream.read(buffer);
+//                            bytes = inputStream.read(buffer);
                         }
 
-                        connected = false; //if reached this line, this means server
-                        inputStream.close();
-                    } catch (IOException e) {
-//                        e.printStackTrace();
-                        attempts++;
-                        connected = false;
-                        Log.d("connections",String.valueOf(destroy));
-                        Log.d("connection", "disconnecteds");
-                        try {
-                            Thread.sleep(retryInterval); // Wait before retrying
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
+//                        connected = false; //if reached this line, this means server
+//                        inputStream.close();
+                    } catch (Exception e){
+
                     }
+//                    } catch (IOException e) {
+////                        e.printStackTrace();
+//                        attempts++;
+//                        connected = false;
+//                        Log.d("connections",String.valueOf(destroy));
+//                        Log.d("connection", "disconnecteds");
+//                        try {
+//                            Thread.sleep(retryInterval); // Wait before retrying
+//                        } catch (InterruptedException ie) {
+//                            Thread.currentThread().interrupt();
+//                        }
+//                    }
                 }
                 if (!connected) {
                     // Handle the scenario when all reconnection attempts fail
