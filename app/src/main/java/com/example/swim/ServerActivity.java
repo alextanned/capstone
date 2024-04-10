@@ -76,7 +76,7 @@ public class ServerActivity extends Service {
         });
     }
 
-    public void sendLocationData(String distance, String bearing, String absoluteBearing, String messageType) {
+    public void sendLocationData(String distance, String bearing, String absoluteBearing,float speed, String messageType) {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
@@ -101,7 +101,7 @@ public class ServerActivity extends Service {
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     try {
                         //Log.d(TAG,"SEND MESSAGE");
-                        String dataToSend = distance + "," + bearing + "," + absoluteBearing;
+                        String dataToSend = distance + "," + bearing + "," + absoluteBearing + "," + speed;
                         Log.d(TAG,dataToSend);
                         // Define the fixed string length
                         int fixedLength = 20;

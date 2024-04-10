@@ -137,6 +137,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 Location currentLocation = convertLatLngToLocation(currentLatLng);
                 for (Location location : locationResult.getLocations()) {
+                    float speed = location.getSpeed();
+                    Log.d("HERE",Float.toString(speed));
                     // Handle the new location
                     if (location.distanceTo(currentLocation) > 0.25f) {
                         prevLatLng = currentLatLng;
@@ -158,7 +160,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 DataSingleton.getInstance().setSharedData("distance", (int)(currentLocation.distanceTo(destLocation)));
                                 int distance = (int)(currentLocation.distanceTo(destLocation));
                                 int bearingToDest = (int)(currentLocation.bearingTo(destLocation));
-                                sendDataToClient(String.valueOf(distance),String.valueOf(vectorBearing),String.valueOf(bearingToDest));
+                                sendDataToClient(String.valueOf(distance),String.valueOf(vectorBearing),String.valueOf(bearingToDest),speed);
 
                                 if(trackPath){
                                     if(path.size() >= 1) {
@@ -447,11 +449,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void sendDataToClient(String distance, String bearing, String absoluteBearing) {
+    private void sendDataToClient(String distance, String bearing, String absoluteBearing, float speed) {
         // Get a reference to the MyServerService
         ServerActivity serverService = ServerActivity.getInstance();
         if (serverService != null && serverService.getClient() != null) {
-            serverService.sendLocationData(distance, bearing,absoluteBearing,"0:");
+            serverService.sendLocationData(distance, bearing,absoluteBearing,speed,"0:");
         }
     }
 
